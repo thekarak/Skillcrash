@@ -99,8 +99,8 @@ SKILL NAME: {name}\nDESCRIPTION: {description}\nSKILL INSTRUCTIONS:\n{body}"""
         },
         "required": ["cases"],
     }
-    response = genai.Client(api_key=os.environ["GEMINI_API_KEY"]).models.generate_content(
-        model=os.getenv("GEMMA_MODEL", "gemma-4-26b-a4b-it"),
+    response = genai.Client(api_key=os.environ.get("GEMINI_API_KEY")).models.generate_content(
+        model=os.getenv("GEMMA_MODEL", "gemma-4-31b-it"),
         contents=prompt,
         config=types.GenerateContentConfig(response_mime_type="application/json", response_schema=response_schema),
     )

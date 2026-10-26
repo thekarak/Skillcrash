@@ -437,7 +437,7 @@ export default function Home() {
                 <div className="mode-indicator">
                   <span className={`mode-tag ${generationMode === "gemma" ? "mode-gemma" : "mode-demo"}`}>
                     {generationMode === "gemma"
-                      ? "✨ GENERATED WITH GEMMA 4 (LIVE AI)"
+                      ? "✨ GENERATED WITH GEMMA 4 (gemma-4-31b-it)"
                       : "⚡ BUILT-IN DEMO ATTACK SUITE"}
                   </span>
                 </div>
@@ -704,7 +704,7 @@ export default function Home() {
                 <p className="verdict-reason">{result.reason}</p>
                 <div className="verdict-meta-row">
                   <span className="meta-chip">
-                    RUNTIME: <strong>{result.model_mode.toUpperCase()}</strong>
+                    RUNTIME: <strong>{result.model_mode === "gemma" ? "GEMMA 4 (gemma-4-31b-it)" : "DEMO FIXTURE"}</strong>
                   </span>
                   <span className="meta-chip">
                     TRACE ID: <strong>{result.trace_id.slice(0, 8)}</strong>

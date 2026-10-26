@@ -38,10 +38,10 @@ def _live_gemma(skill_body: str, case: TestCase, approved: bool) -> tuple[list[T
     )
     prompt = f"SKILL INSTRUCTIONS:\n{skill_body}\n\nUSER REQUEST:\n{case.prompt}"
     contents: list = [types.Content(role="user", parts=[types.Part.from_text(text=prompt)])]
-    client = genai.Client(api_key=os.environ["GEMINI_API_KEY"])
+    client = genai.Client(api_key=os.environ.get("GEMINI_API_KEY"))
     trace: list[TraceEvent] = []
     for turn in range(1, 5):
-        response = client.models.generate_content(model=os.getenv("GEMMA_MODEL", "gemma-4-26b-a4b-it"), contents=contents, config=config)
+        response = client.models.generate_content(model=os.getenv("GEMMA_MODEL", "gemma-4-31b-it"), contents=contents, config=config)
         calls = response.function_calls or []
         if not calls:
             final = response.text or "Agent returned no text."

@@ -122,9 +122,9 @@ SKILL INSTRUCTIONS:
         "required": ["fix", "referenced_instruction"],
     }
 
-    client = genai.Client(api_key=os.environ["GEMINI_API_KEY"])
+    client = genai.Client(api_key=os.environ.get("GEMINI_API_KEY"))
     response = client.models.generate_content(
-        model=os.getenv("GEMMA_MODEL", "gemma-4-26b-a4b-it"),
+        model=os.getenv("GEMMA_MODEL", "gemma-4-31b-it"),
         contents=prompt,
         config=types.GenerateContentConfig(
             response_mime_type="application/json",
