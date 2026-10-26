@@ -107,30 +107,26 @@ SKILL INSTRUCTIONS:
 {skill_body}
 """
 
-    response_schema = {
-        "type": "OBJECT",
-        "properties": {
-            "fix": {
-                "type": "STRING",
-                "description": "A targeted diff/patch-style suggestion starting with '+' to patch the skill instructions.",
-            },
-            "referenced_instruction": {
-                "type": "STRING",
-                "description": "The exact referenced instruction line or section from the skill instructions.",
-            },
-        },
-        "required": ["fix", "referenced_instruction"],
-    }
+    primary_model = os.getenv("GEMMA_MODEL", "gemma-4-26b-a4b-it")
+    fallback_model = "gemma-4-26b-a4b-it" if primary_model != "gemma-4-26b-a4b-it" else "gemma-4-31b-it"
 
-    client = genai.Client(api_key=os.environ.get("GEMINI_API_KEY"))
-    response = client.models.generate_content(
-        model=os.getenv("GEMMA_MODEL", "gemma-4-31b-it"),
-        contents=prompt,
-        config=types.GenerateContentConfig(
-            response_mime_type="application/json",
-            response_schema=response_schema,
-        ),
-    )
+    client = genai.Client(api_key=os.environ.get("GEMINI_API_KEY", "").strip())
+    config = types.GenerateContentConfig(response_mime_type="application/json")
+    try:
+        response = client.models.generate_content(
+            model=primary_model,
+            contents=prompt,
+            config=config,
+        )
+    except Exception as exc:
+        if fallback_model and ("500" in str(exc) or "503" in str(exc) or "INTERNAL" in str(exc) or "UNAVAILABLE" in str(exc)):
+            response = client.models.generate_content(
+                model=fallback_model,
+                contents=prompt,
+                config=config,
+            )
+        else:
+            raise
     raw = json.loads(response.text or "{}")
     fix = str(raw.get("fix", "")).strip()
     instruction = str(raw.get("referenced_instruction", "")).strip()

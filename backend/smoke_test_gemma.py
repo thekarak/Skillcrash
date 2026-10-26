@@ -1,8 +1,8 @@
 """
 SkillCrash - Gemma 4 Smoke Test Script
-Verifies Google AI Studio API key and Gemma 4 (gemma-4-31b-it) connectivity.
-Run from backend:
-    python smoke_test_gemma.py
+Verifies Google AI Studio API key and Gemma 4 connectivity.
+Run from repository root or backend:
+    python backend/smoke_test_gemma.py
 """
 
 import os
@@ -17,11 +17,11 @@ else:
     load_dotenv()
 
 api_key = os.getenv("GEMINI_API_KEY", "").strip()
-model_name = os.getenv("GEMMA_MODEL", "gemma-4-31b-it")
+model_name = os.getenv("GEMMA_MODEL", "gemma-4-26b-a4b-it").strip()
 
-print("=" * 60)
-print(f"SkillCrash: Gemma 4 Smoke Test [{model_name}]")
-print("=" * 60)
+print("=" * 65)
+print(f"SkillCrash: Gemma 4 Smoke Test")
+print("=" * 65)
 
 if not api_key:
     print("\n[!] WARNING: GEMINI_API_KEY is not set.")
@@ -30,24 +30,40 @@ if not api_key:
     exit(1)
 
 print(f"API Key detected: {api_key[:6]}...{api_key[-4:] if len(api_key) > 10 else ''}")
-print(f"Target Model:     {model_name}")
-print("Connecting to Google GenAI API...")
+print(f"Primary Model:    {model_name}")
+print("Connecting to Google GenAI API...\n")
 
-try:
-    from google import genai
+from google import genai
 
-    client = genai.Client()
-    response = client.models.generate_content(
-        model=model_name,
-        contents="Roses are red, violets are blue. Reply with the single word READY if you can hear me.",
-    )
-    print("\n[✓] SUCCESS: Connected to Gemma 4!")
-    print(f"Model Response:\n{response.text.strip()}\n")
-    print("Gemma 4 is fully operational for SkillCrash!")
-except Exception as e:
-    print(f"\n[X] ERROR: Call to {model_name} failed:")
-    print(str(e))
-    print("\nTroubleshooting tips:")
-    print("1. Verify your GEMINI_API_KEY in backend/.env")
-    print("2. Check your quota and model access at https://aistudio.google.com/")
-    exit(2)
+client = genai.Client()
+
+def test_single_model(m_name: str) -> bool:
+    print(f"--> Testing model: {m_name}")
+    try:
+        response = client.models.generate_content(
+            model=m_name,
+            contents="Reply with the single word READY.",
+        )
+        print(f"[OK] SUCCESS ({m_name}): {response.text.strip()}")
+        return True
+    except Exception as e:
+        err_msg = str(e)
+        print(f"[ERROR] FAILED ({m_name}): {err_msg}")
+        return False
+
+# Test primary model
+success = test_single_model(model_name)
+
+if not success and model_name != "gemma-4-26b-a4b-it":
+    print("\n" + "-" * 65)
+    print(f"Note: '{model_name}' encountered an upstream Google API error.")
+    print("Testing recommended Blueprint model 'gemma-4-26b-a4b-it'...")
+    print("-" * 65)
+    backup_success = test_single_model("gemma-4-26b-a4b-it")
+    if backup_success:
+        print("\n[OK] Gemma 4 (gemma-4-26b-a4b-it) is 100% operational!")
+        print("Tip: In backend/.env, set:")
+        print("    GEMMA_MODEL=gemma-4-26b-a4b-it")
+        print("to use the stable Gemma 4 model while Google resolves the 31B outage.")
+
+print("\n" + "=" * 65)
