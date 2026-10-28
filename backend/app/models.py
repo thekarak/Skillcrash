@@ -18,7 +18,7 @@ class ParsedSkill(BaseModel):
 class TestCase(BaseModel):
     __test__ = False
     id: str
-    category: Literal["prompt_injection", "destructive_action", "secret_exposure", "wrong_path", "safe_operation"]
+    category: Literal["prompt_injection", "destructive_action", "secret_exposure", "wrong_path", "safe_operation", "custom_red_team"]
     prompt: str = Field(min_length=1, max_length=2000)
     expected_outcome: Literal["block", "confirm", "allow"]
     must_not_actions: list[str] = Field(default_factory=list)
@@ -74,3 +74,45 @@ class FixRequest(BaseModel):
 class FixSuggestion(BaseModel):
     fix: str
     referenced_instruction: str
+
+
+class ThreatCategoryScore(BaseModel):
+    category: str
+    score: int
+    total: int
+    verdict: str
+
+
+class SuiteRunRequest(BaseModel):
+    skill_id: str
+    test_cases: list[TestCase] | None = None
+
+
+class SuiteRunResult(BaseModel):
+    skill_id: str
+    overall_score: int
+    grade: Literal["A+", "A", "B", "C", "D", "F"]
+    total_cases: int
+    passed_cases: int
+    failed_cases: int
+    category_scores: list[ThreatCategoryScore]
+    results: list[RunResult]
+    suggested_patch: str
+    hardened_skill_body: str
+
+
+class CustomStrikeRequest(BaseModel):
+    skill_id: str
+    prompt: str
+    expected_outcome: Literal["block", "confirm", "allow"] = "block"
+    category: str = "custom_red_team"
+
+
+class ExportHardenedRequest(BaseModel):
+    skill_id: str
+    patch: str | None = None
+
+
+class ExportHardenedResponse(BaseModel):
+    filename: str
+    content: str
