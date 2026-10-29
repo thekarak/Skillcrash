@@ -1,0 +1,463 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-onest);
+  --font-mono: var(--font-jetbrains-mono);
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar: var(--sidebar);
+  --color-chart-5: var(--chart-5);
+  --color-chart-4: var(--chart-4);
+  --color-chart-3: var(--chart-3);
+  --color-chart-2: var(--chart-2);
+  --color-chart-1: var(--chart-1);
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+
+  /* ---- SkillCrash palette (token-driven, dual scope: ink & bone) ---- */
+  --color-base: var(--sc-base);
+  --color-raised: var(--sc-raised);
+  --color-surface: var(--sc-surface);
+  --color-inset: var(--sc-inset);
+  --color-line: var(--sc-line);
+  --color-line-strong: var(--sc-line-strong);
+  --color-ink: var(--sc-ink);
+  --color-ink-2: var(--sc-ink-2);
+  --color-ink-3: var(--sc-ink-3);
+  --color-accent: var(--sc-accent);
+  --color-accent-dim: var(--sc-accent-dim);
+  --color-copper: var(--sc-copper);
+  --color-ok: var(--sc-ok);
+  --color-bad: var(--sc-bad);
+  --color-warn: var(--sc-warn);
+}
+
+/*
+ * SkillCrash identity — an editorial security laboratory.
+ *
+ * Dark scope (default): ink black & deep warm charcoal, bone typography,
+ *   vermilion for attacks/failures, copper for supporting detail.
+ * Light scope (.sc-light): warm bone / parchment surfaces, ink typography —
+ *   the same tokens re-mapped, so every component works in both worlds.
+ */
+:root {
+  --font-onest: 'Onest', system-ui, sans-serif;
+  --font-jetbrains-mono: 'JetBrains Mono', monospace;
+  --radius: 0.375rem;
+
+  /* ink scope */
+  --sc-base: #171613;
+  --sc-raised: #1e1b17;
+  --sc-surface: #24211d;
+  --sc-inset: #100e0c;
+  --sc-line: #37322b;
+  --sc-line-strong: #514a40;
+  --sc-ink: #eee8dc;
+  --sc-ink-2: #a9a297;
+  --sc-ink-3: #736c62;
+  --sc-accent: #e0231c;
+  --sc-accent-dim: #56211c;
+  --sc-copper: #a56f50;
+  --sc-ok: #7ba36f;
+  --sc-bad: #e0231c;
+  --sc-bad-hi: #f0705f;
+  --sc-warn: #cf9436;
+  --sc-ghost-stroke: rgba(238, 232, 220, 0.075);
+  --sc-grid-line: rgba(238, 232, 220, 0.05);
+  --sc-scrollbar: #3a352e;
+  --sc-scrollbar-hover: #4c463d;
+
+  /* shadcn mappings → ink scope */
+  --background: var(--sc-base);
+  --foreground: var(--sc-ink);
+  --card: var(--sc-surface);
+  --card-foreground: var(--sc-ink);
+  --popover: #211e1a;
+  --popover-foreground: var(--sc-ink);
+  --primary: var(--sc-accent);
+  --primary-foreground: #fbf6ec;
+  --secondary: #2a2622;
+  --secondary-foreground: #e4ddd0;
+  --muted: #23201c;
+  --muted-foreground: var(--sc-ink-2);
+  --accent: #2c2721;
+  --accent-foreground: var(--sc-ink);
+  --destructive: var(--sc-bad);
+  --border: var(--sc-line);
+  --input: var(--sc-line);
+  --ring: var(--sc-accent);
+  --chart-1: #e0231c;
+  --chart-2: #7ba36f;
+  --chart-3: #cf9436;
+  --chart-4: #a56f50;
+  --chart-5: #a9a297;
+  --sidebar: #1a1815;
+  --sidebar-foreground: var(--sc-ink);
+  --sidebar-primary: var(--sc-accent);
+  --sidebar-primary-foreground: #fbf6ec;
+  --sidebar-accent: #262220;
+  --sidebar-accent-foreground: var(--sc-ink);
+  --sidebar-border: var(--sc-line);
+  --sidebar-ring: var(--sc-accent);
+}
+
+/* bone scope — applied to editorial light sections */
+.sc-light {
+  --sc-base: #eee8dc;
+  --sc-raised: #e6dfcf;
+  --sc-surface: #f4efe5;
+  --sc-inset: #e2dbc9;
+  --sc-line: #d2c8b4;
+  --sc-line-strong: #a89c85;
+  --sc-ink: #171613;
+  --sc-ink-2: #57524a;
+  --sc-ink-3: #8c867d;
+  --sc-accent: #d81f18;
+  --sc-accent-dim: #f3d9d6;
+  --sc-copper: #a56f50;
+  --sc-ok: #47713f;
+  --sc-bad: #c1190f;
+  --sc-warn: #96691c;
+  --sc-ghost-stroke: rgba(23, 22, 19, 0.09);
+  --sc-grid-line: rgba(165, 111, 80, 0.09);
+  --sc-scrollbar: #c9bfa9;
+  --sc-scrollbar-hover: #b0a488;
+
+  /* shadcn mappings → bone scope (dialogs, popovers, menus inside light sections) */
+  --background: var(--sc-base);
+  --foreground: var(--sc-ink);
+  --card: var(--sc-surface);
+  --card-foreground: var(--sc-ink);
+  --popover: #f6f1e7;
+  --popover-foreground: var(--sc-ink);
+  --primary: var(--sc-accent);
+  --primary-foreground: #fbf6ec;
+  --secondary: #e6dfcf;
+  --secondary-foreground: #3a352e;
+  --muted: #e6dfcf;
+  --muted-foreground: var(--sc-ink-2);
+  --accent: #e9e2d2;
+  --accent-foreground: var(--sc-ink);
+  --destructive: var(--sc-bad);
+  --border: var(--sc-line);
+  --input: var(--sc-line);
+  --ring: var(--sc-accent);
+  --sidebar: #e9e3d5;
+  --sidebar-foreground: var(--sc-ink);
+  --sidebar-primary: var(--sc-accent);
+  --sidebar-primary-foreground: #fbf6ec;
+  --sidebar-accent: #e2dbc9;
+  --sidebar-accent-foreground: var(--sc-ink);
+  --sidebar-border: var(--sc-line);
+  --sidebar-ring: var(--sc-accent);
+}
+
+/* ink scope re-applied — dark instruments inside light sections */
+.sc-ink {
+  --sc-base: #171613;
+  --sc-raised: #1e1b17;
+  --sc-surface: #24211d;
+  --sc-inset: #100e0c;
+  --sc-line: #37322b;
+  --sc-line-strong: #514a40;
+  --sc-ink: #eee8dc;
+  --sc-ink-2: #b5aea1;
+  --sc-ink-3: #7f786e;
+  --sc-accent: #e0231c;
+  --sc-accent-dim: #56211c;
+  --sc-copper: #a56f50;
+  --sc-ok: #7ba36f;
+  --sc-bad: #e0231c;
+  --sc-bad-hi: #f0705f;
+  --sc-warn: #cf9436;
+  --sc-ghost-stroke: rgba(238, 232, 220, 0.075);
+  --sc-grid-line: rgba(238, 232, 220, 0.05);
+  --sc-scrollbar: #3a352e;
+  --sc-scrollbar-hover: #4c463d;
+
+  --background: #171613;
+  --foreground: #eee8dc;
+  --card: #24211d;
+  --card-foreground: #eee8dc;
+  --popover: #211e1a;
+  --popover-foreground: #eee8dc;
+  --primary: #e0231c;
+  --primary-foreground: #fbf6ec;
+  --secondary: #2a2622;
+  --secondary-foreground: #e4ddd0;
+  --muted: #23201c;
+  --muted-foreground: #a9a297;
+  --accent: #2c2721;
+  --accent-foreground: #eee8dc;
+  --destructive: #e0231c;
+  --border: #37322b;
+  --input: #37322b;
+  --ring: #e0231c;
+}
+
+.dark {
+  --background: var(--sc-base);
+  --foreground: var(--sc-ink);
+  --card: var(--sc-surface);
+  --card-foreground: var(--sc-ink);
+  --popover: #211e1a;
+  --popover-foreground: var(--sc-ink);
+  --primary: var(--sc-accent);
+  --primary-foreground: #fbf6ec;
+  --secondary: #2a2622;
+  --secondary-foreground: #e4ddd0;
+  --muted: #23201c;
+  --muted-foreground: var(--sc-ink-2);
+  --accent: #2c2721;
+  --accent-foreground: var(--sc-ink);
+  --destructive: var(--sc-bad);
+  --border: var(--sc-line);
+  --input: var(--sc-line);
+  --ring: var(--sc-accent);
+  --chart-1: #e0231c;
+  --chart-2: #7ba36f;
+  --chart-3: #cf9436;
+  --chart-4: #a56f50;
+  --chart-5: #a9a297;
+  --sidebar: #1a1815;
+  --sidebar-foreground: var(--sc-ink);
+  --sidebar-primary: var(--sc-accent);
+  --sidebar-primary-foreground: #fbf6ec;
+  --sidebar-accent: #262220;
+  --sidebar-accent-foreground: var(--sc-ink);
+  --sidebar-border: var(--sc-line);
+  --sidebar-ring: var(--sc-accent);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  html {
+    scroll-behavior: smooth;
+  }
+  body {
+    @apply bg-background text-foreground font-sans;
+    font-feature-settings: "ss01";
+  }
+  ::selection {
+    background: rgba(224, 35, 28, 0.22);
+    color: #171613;
+  }
+  .sc-light ::selection {
+    background: rgba(224, 35, 28, 0.16);
+    color: #171613;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+@layer components {
+  /* Layout shell */
+  .sc-container {
+    @apply mx-auto w-full max-w-7xl px-5 sm:px-8;
+  }
+  /* Wider editorial shell — lets the hero's Attack Path plate run larger */
+  .sc-container-wide {
+    @apply mx-auto w-full max-w-[1520px] px-5 sm:px-8;
+  }
+
+  /* Type helpers */
+  .sc-eyebrow {
+    @apply font-mono text-[11px] uppercase tracking-[0.24em] text-ink-3;
+  }
+  .sc-h2 {
+    @apply text-[2.1rem] leading-[1.04] font-semibold tracking-[-0.025em] text-ink sm:text-[2.9rem];
+  }
+  .sc-lede {
+    @apply text-base leading-relaxed text-ink-2;
+  }
+  .sc-mono-label {
+    @apply font-mono text-[11px] tracking-[0.08em] text-ink-3;
+  }
+
+  /* Editorial section header row: [index] EYEBROW ───────── */
+  .sc-section-head {
+    @apply flex items-center gap-3;
+  }
+  .sc-section-index {
+    @apply font-mono text-[11px] font-semibold tracking-[0.08em] text-accent;
+  }
+  .sc-section-rule {
+    @apply h-px flex-1 bg-gradient-to-r from-line-strong to-transparent;
+  }
+
+  /* Oversized ghost glyph — editorial backdrop, kept extremely quiet */
+  .sc-ghost {
+    @apply pointer-events-none absolute select-none font-mono font-bold leading-none tracking-tighter;
+    color: transparent;
+    -webkit-text-stroke: 1px var(--sc-ghost-stroke);
+  }
+
+  /* Panel with a restrained hover lift (interaction affordance) */
+  .sc-panel-hover {
+    @apply transition-[border-color,transform] duration-300 hover:-translate-y-0.5 hover:border-line-strong;
+  }
+
+  /* Warm hairline grid backdrop */
+  .sc-grid-bg {
+    background-image:
+      linear-gradient(to right, var(--sc-grid-line) 1px, transparent 1px),
+      linear-gradient(to bottom, var(--sc-grid-line) 1px, transparent 1px);
+    background-size: 44px 44px;
+  }
+  .sc-grid-bg-fade {
+    -webkit-mask-image: radial-gradient(ellipse 90% 70% at 50% 30%, black 35%, transparent 78%);
+    mask-image: radial-gradient(ellipse 90% 70% at 50% 30%, black 35%, transparent 78%);
+  }
+
+  /* Thin scrollbars for dense panels */
+  .sc-scroll {
+    scrollbar-width: thin;
+    scrollbar-color: var(--sc-scrollbar) transparent;
+  }
+  .sc-scroll::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  .sc-scroll::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .sc-scroll::-webkit-scrollbar-thumb {
+    background: var(--sc-scrollbar);
+    border-radius: 4px;
+  }
+  .sc-scroll::-webkit-scrollbar-thumb:hover {
+    background: var(--sc-scrollbar-hover);
+  }
+
+  /* Panel chrome */
+  .sc-panel {
+    @apply rounded-md border border-line bg-surface;
+  }
+  .sc-panel-inset {
+    @apply rounded border border-line bg-inset;
+  }
+  .sc-chip {
+    @apply inline-flex items-center gap-1.5 rounded border border-line bg-raised px-2 py-0.5 font-mono text-[11px] leading-5 text-ink-2;
+  }
+
+  /* Status text colors */
+  .sc-text-ok { color: var(--sc-ok); }
+  .sc-text-bad { color: var(--sc-bad); }
+  .sc-text-bad-hi { color: var(--sc-bad-hi, var(--sc-bad)); }
+  .sc-text-warn { color: var(--sc-warn); }
+  .sc-text-accent { color: var(--sc-accent); }
+  .sc-text-copper { color: var(--sc-copper); }
+
+  /* Subtle paper grain for the bone sections — authored texture, not noise */
+  .sc-grain::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    opacity: 0.5;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='matrix' values='0 0 0 0 0.42 0 0 0 0 0.36 0 0 0 0 0.27 0 0 0 0.035 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+}
+
+/* ---------- Keyframes (subtle, purposeful) ---------- */
+
+@keyframes sc-fade-up {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.sc-fade-up {
+  animation: sc-fade-up 0.55s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes sc-blink {
+  0%, 55% { opacity: 1; }
+  56%, 100% { opacity: 0; }
+}
+.sc-caret {
+  display: inline-block;
+  width: 0.55em;
+  height: 1.05em;
+  margin-left: 2px;
+  vertical-align: text-bottom;
+  background: var(--sc-accent);
+  animation: sc-blink 1.1s steps(1) infinite;
+}
+
+@keyframes sc-dash-flow {
+  to { stroke-dashoffset: -18; }
+}
+.sc-dash-flow {
+  stroke-dasharray: 4 5;
+  animation: sc-dash-flow 1.4s linear infinite;
+}
+
+@keyframes sc-pulse-dot {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.35; }
+}
+.sc-pulse-dot {
+  animation: sc-pulse-dot 1.8s ease-in-out infinite;
+}
+
+@keyframes sc-scan {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(320%); }
+}
+.sc-scan::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  width: 30%;
+  background: linear-gradient(90deg, transparent, rgba(224, 35, 28, 0.1), transparent);
+  animation: sc-scan 2.6s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sc-caret { animation: none; }
+  .sc-dash-flow { animation: none; }
+  .sc-pulse-dot { animation: none; }
+  .sc-fade-up { animation: none; }
+  .sc-scan::after { animation: none; display: none; }
+}
+

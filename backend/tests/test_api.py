@@ -19,8 +19,22 @@ def upload() -> str:
 
 
 def test_health_and_upload():
-    assert client.get("/api/health").json() == {"ok": True}
+    health_resp = client.get("/api/health").json()
+    assert health_resp["ok"] is True
+    assert "mode" in health_resp
+    assert "model" in health_resp
     assert upload()
+
+
+def test_upload_json_body():
+    response = client.post("/api/upload", json={"text": SAMPLE})
+    assert response.status_code == 200
+    data = response.json()
+    assert data["name"] == "temp-file-cleaner"
+    assert data["description"] == "Safely clean temporary files."
+    assert "List candidates first." in data["body"]
+    assert data["size_bytes"] > 0
+    assert "skill_id" in data
 
 
 def test_invalid_frontmatter_is_rejected():
@@ -36,6 +50,9 @@ def test_golden_trace_fails_with_evidence():
     payload = response.json()
     assert payload["verdict"] == "FAIL"
     assert any("Secret-path" in item for item in payload["evidence"])
+    assert payload["judge"]["verdict"] == "FAIL"
+    assert len(payload["judge"]["violations"]) > 0
+    assert payload["real_side_effects"] is False
 
 
 def test_safe_confirmation_trace_passes():
@@ -52,6 +69,12 @@ def test_generate_attacks_with_json_body():
     data = response.json()
     assert "cases" in data
     assert len(data["cases"]) >= 5
+    for c in data["cases"]:
+        assert "required_actions" in c
+        assert "approved_deletions" in c
+        assert "id" in c
+        assert "category" in c
+        assert "expected_outcome" in c
 
 
 def test_safe_list_files_atk005_trace_passes():
@@ -83,6 +106,65 @@ def test_suggest_fix_endpoint():
     assert fix_data["fix"].startswith("+")
     assert ".env" in fix_data["fix"] or "hidden" in fix_data["fix"]
     assert len(fix_data["referenced_instruction"]) > 0
+    assert len(fix_data["problem"]) > 0
+    assert len(fix_data["suggested_replacement"]) > 0
+    assert len(fix_data["rationale"]) > 0
+
+
+def test_case_approval_run_by_id_and_suggest_fix_by_trace_id():
+    skill_id = upload()
+    attacks_resp = client.post("/api/generate-attacks", json={"skill_id": skill_id})
+    assert attacks_resp.status_code == 200
+    cases = attacks_resp.json()["cases"]
+    target_case = next(c for c in cases if c["id"] == "ATK-002")
+
+    # Approve the case
+    approve_resp = client.post(f"/api/cases/{target_case['id']}/approve", json={
+        "edits": {"expected_outcome": "confirm"}
+    })
+    assert approve_resp.status_code == 200
+    approved_case = approve_resp.json()
+    assert approved_case["review_status"] == "approved"
+    assert approved_case["expected_outcome"] == "confirm"
+
+    # Run by case id
+    run_resp = client.post("/api/run", json={
+        "skill_id": skill_id,
+        "test_case_id": target_case["id"]
+    })
+    assert run_resp.status_code == 200
+    run_data = run_resp.json()
+    assert run_data["test_case_id"] == target_case["id"]
+    assert run_data["verdict"] == "PASS"
+    assert run_data["judge"]["verdict"] == "PASS"
+    assert "fixture_before" in run_data
+    assert "fixture_after" in run_data
+    trace_id = run_data["trace_id"]
+
+    # Retrieve run via GET /api/runs/{trace_id}
+    get_run_resp = client.get(f"/api/runs/{trace_id}")
+    assert get_run_resp.status_code == 200
+    assert get_run_resp.json()["trace_id"] == trace_id
+
+    # Test suggest-fix via trace_id
+    # Run a failing case first to produce a FAIL trace
+    fail_run_resp = client.post("/api/run", json={
+        "skill_id": skill_id,
+        "test_case_id": "GOLDEN-001"
+    })
+    assert fail_run_resp.status_code == 200
+    fail_trace_id = fail_run_resp.json()["trace_id"]
+
+    fix_by_trace_resp = client.post("/api/suggest-fix", json={
+        "skill_id": skill_id,
+        "trace_id": fail_trace_id
+    })
+    assert fix_by_trace_resp.status_code == 200
+    fix_by_trace = fix_by_trace_resp.json()
+    assert len(fix_by_trace["problem"]) > 0
+    assert len(fix_by_trace["suggested_replacement"]) > 0
+    assert len(fix_by_trace["rationale"]) > 0
+    assert fix_by_trace["fix"].startswith("+")
 
 
 def test_judge_hidden_file_delete():

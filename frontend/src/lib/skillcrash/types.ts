@@ -1,0 +1,277 @@
+/**
+ * SkillCrash — shared typed models.
+ *
+ * These types mirror the domain of the FastAPI backend (Pydantic models):
+ * skill metadata, adversarial test cases, approved expectations, agent
+ * actions, mock-tool results, execution trace events, judge verdicts and
+ * suggested fixes. The frontend API adapter (see api.ts) is the only layer
+ * allowed to construct these from external input.
+ */
+
+/* ------------------------------ Skill ------------------------------ */
+
+export interface SkillMeta {
+  name: string;
+  description: string;
+  version?: string;
+  author?: string;
+  allowedTools?: string[];
+}
+
+export type SkillParseIssueSeverity = "error" | "warning";
+
+export interface SkillParseIssue {
+  severity: SkillParseIssueSeverity;
+  message: string;
+  line?: number;
+}
+
+export interface SafetyDirective {
+  text: string;
+  source: "frontmatter" | "instructions";
+}
+
+export type SkillSource = "demo" | "paste" | "upload";
+
+export interface ParsedSkill {
+  id: string;
+  meta: SkillMeta;
+  instructions: string;
+  frontmatterRaw: string | null;
+  safetyDirectives: SafetyDirective[];
+  issues: SkillParseIssue[];
+  raw: string;
+  source: SkillSource;
+  fileName?: string;
+}
+
+/* --------------------------- Attack tests --------------------------- */
+
+export type AttackCategory =
+  | "prompt-injection"
+  | "unconfirmed-destructive"
+  | "secret-exposure"
+  | "invalid-path"
+  | "conflicting-instructions";
+
+export const ATTACK_CATEGORY_LABELS: Record<AttackCategory, string> = {
+  "prompt-injection": "Prompt injection",
+  "unconfirmed-destructive": "Destructive without confirmation",
+  "secret-exposure": "Secret-file exposure",
+  "invalid-path": "Missing / invalid path",
+  "conflicting-instructions": "Conflicting instructions",
+};
+
+export type TestApprovalState = "pending" | "approved";
+
+export interface AttackTestCase {
+  id: string; // e.g. "TC-004"
+  title: string;
+  category: AttackCategory;
+  attackPrompt: string;
+  /** Where the case came from. Always honestly labelled. */
+  generatedBy: "demo-generator" | "gemma-4" | "upload";
+  createdAt: string;
+}
+
+/* --------------------- Expected behaviour rules --------------------- */
+
+export type RuleKind =
+  | "never-attempt-secret-access" // no tool call may target secret/credential files
+  | "never-attempt-tool" // a given tool (optionally with matching args) must not be called
+  | "require-confirmation-before-destructive" // destructive calls must carry explicit confirmation
+  | "require-refusal-or-clarification" // agent must decline or ask when safety applies
+  | "path-stays-in-root" // no operation may target paths outside the sandbox root
+  | "never-bypass-restrictions"; // agent must not act on claims that override skill rules
+
+export const RULE_KIND_LABELS: Record<RuleKind, string> = {
+  "never-attempt-secret-access": "Never attempt secret-file access",
+  "never-attempt-tool": "Never attempt tool",
+  "require-confirmation-before-destructive": "Confirmation before destructive ops",
+  "require-refusal-or-clarification": "Refuse or clarify",
+  "path-stays-in-root": "Paths stay inside sandbox root",
+  "never-bypass-restrictions": "Never bypass restrictions",
+};
+
+export interface ExpectedRule {
+  id: string; // e.g. "R1"
+  kind: RuleKind;
+  /** Human-readable description approved by the developer. */
+  description: string;
+  /** For never-attempt-tool. */
+  tool?: string;
+  /** Optional argument matcher (regex source) for never-attempt-tool. */
+  argKey?: string;
+  argPattern?: string;
+}
+
+/**
+ * Approved expectations are kept strictly separate from the generated
+ * attack text: the judge only ever reads the rules the developer approved.
+ */
+export interface ApprovedExpectation {
+  testId: string;
+  rules: ExpectedRule[];
+  approvedBy: string;
+  approvedAt: string;
+}
+
+/* ---------------------------- Mock tools ---------------------------- */
+
+export interface MockToolArgSpec {
+  type: "string" | "boolean";
+  required?: boolean;
+  description: string;
+}
+
+export interface MockToolSpec {
+  name: string;
+  description: string;
+  args: Record<string, MockToolArgSpec>;
+  policy: string;
+}
+
+export interface SandboxPolicy {
+  rootDir: string;
+  /** Regex sources matched against path-like arguments. */
+  secretPatterns: string[];
+  allowlistedTools: string[];
+  /** Tools that require an explicit `confirmed: true` argument. */
+  requireConfirmation: string[];
+  /** Allowlisted upload destinations. */
+  allowlistedDestinations: string[];
+  maxSteps: number;
+}
+
+export interface ToolCallRequest {
+  callId: string;
+  tool: string;
+  args: Record<string, unknown>;
+}
+
+export type BlockReason =
+  | "unknown-tool"
+  | "arg-schema"
+  | "path-escape"
+  | "secret-file"
+  | "destination"
+  | "confirmation-required";
+
+export interface ToolValidation {
+  ok: boolean;
+  reason?: string;
+  blockedBy?: BlockReason;
+}
+
+export interface MockToolResult {
+  ok: boolean;
+  blocked: boolean;
+  /** Honest, clearly-simulated output. Always prefixed with [mock]. */
+  output: string;
+  reason?: string;
+}
+
+export interface SandboxDecision {
+  validation: ToolValidation;
+  result: MockToolResult | null;
+}
+
+/* --------------------------- Execution trace --------------------------- */
+
+export type TraceEvent =
+  | { seq: number; t: number; type: "run-start"; testId: string; agent: string; simulated: boolean }
+  | { seq: number; t: number; type: "attack-prompt"; content: string }
+  | { seq: number; t: number; type: "agent-message"; content: string }
+  | { seq: number; t: number; type: "tool-call"; callId: string; tool: string; args: Record<string, unknown> }
+  | {
+      seq: number;
+      t: number;
+      type: "tool-validation";
+      callId: string;
+      tool: string;
+      ok: boolean;
+      reason?: string;
+      blockedBy?: BlockReason;
+    }
+  | {
+      seq: number;
+      t: number;
+      type: "tool-result";
+      callId: string;
+      tool: string;
+      ok: boolean;
+      blocked: boolean;
+      output: string;
+      reason?: string;
+    }
+  | { seq: number; t: number; type: "agent-final"; content: string }
+  | {
+      seq: number;
+      t: number;
+      type: "run-end";
+      stepCount: number;
+      outcome: "completed" | "step-limit" | "agent-error";
+      detail?: string;
+    }
+  | { seq: number; t: number; type: "judge-start"; rulesCount: number; judgedBy: string }
+  | { seq: number; t: number; type: "judge-rule"; ruleId: string; satisfied: boolean; detail: string }
+  | { seq: number; t: number; type: "judge-verdict"; outcome: VerdictOutcome; reason: string };
+
+export type TraceEventType = TraceEvent["type"];
+
+/* ------------------------------ Verdict ------------------------------ */
+
+export type VerdictOutcome = "PASS" | "FAIL" | "ERROR";
+
+export interface VerdictEvidence {
+  ruleId: string;
+  description: string;
+  satisfied: boolean;
+  detail: string;
+  /** seq numbers of the trace events this evidence is grounded in. */
+  traceRefs: number[];
+}
+
+export interface Verdict {
+  testId: string;
+  outcome: VerdictOutcome;
+  reason: string;
+  evidence: VerdictEvidence[];
+  stepCount: number;
+  durationMs: number;
+  judgedBy: "deterministic-judge";
+  evaluatedAt: string;
+}
+
+/* -------------------------- Suggested fix -------------------------- */
+
+export interface SuggestedFix {
+  testId: string;
+  originalInstruction: string;
+  whyInadequate: string;
+  replacement: string;
+  generatedBy: "deterministic-template";
+  disclaimer: string;
+}
+
+/* ---------------------------- Run records ---------------------------- */
+
+export interface TestRunRecord {
+  testId: string;
+  startedAt: string;
+  durationMs: number;
+  verdict: Verdict;
+  trace: TraceEvent[];
+}
+
+export type RunStatus = "idle" | "running" | "done" | "error";
+
+/* ------------------------- Workspace nav keys ------------------------- */
+
+export type WorkspaceNavKey =
+  | "dashboard"
+  | "runs"
+  | "library"
+  | "tools"
+  | "rules"
+  | "settings";
