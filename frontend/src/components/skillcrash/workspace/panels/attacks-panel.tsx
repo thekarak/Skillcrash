@@ -257,29 +257,36 @@ export function AttacksPanel() {
                   </p>
 
                   <ul className="space-y-1.5" role="group" aria-label="Expected behaviour rules">
-                    {review.rules.map((rule) => {
-                      const enabled = review.selectedRuleIds.has(rule.id);
+                    {(review.offered.length > 0 ? review.offered : review.rules).map((rule) => {
+                      const enabled = review.rules.some((r) => r.id === rule.id);
                       return (
                         <li key={rule.id}>
                           <label
                             className={cn(
-                              "flex items-start gap-2.5 rounded-md border p-2 text-[12px] transition-colors cursor-pointer",
+                              "flex items-start gap-2.5 rounded-md border px-3 py-2 text-[12px] transition-colors cursor-pointer",
                               enabled
-                                ? "border-accent/40 bg-accent/[0.05]"
+                                ? review.approved
+                                  ? "border-ok/30 bg-ok/[0.05]"
+                                  : "border-accent/40 bg-accent/[0.05]"
                                 : "border-line bg-raised/50 opacity-60"
                             )}
                           >
                             <input
                               type="checkbox"
                               checked={enabled}
+                              disabled={review.approved}
                               onChange={() => toggleRule(selected.id, rule.id)}
-                              className="mt-0.5 rounded border-line text-accent focus:ring-accent"
+                              className="mt-0.5 h-3.5 w-3.5 shrink-0 rounded border-line text-accent focus:ring-accent"
+                              aria-label={`Rule ${rule.id}: ${rule.description}`}
                             />
                             <span className="min-w-0 flex-1">
                               <span className="font-mono text-[10.5px] font-semibold text-accent">
                                 {rule.id}
                               </span>{" "}
                               <span className="text-ink">{rule.description}</span>
+                              <span className="mt-0.5 block font-mono text-[10px] text-ink-3">
+                                kind: {rule.kind}
+                              </span>
                             </span>
                           </label>
                         </li>
