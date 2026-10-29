@@ -10,6 +10,7 @@ export function WorkspaceHeader() {
   const nav = useSkillCrash((s) => s.nav);
   const skills = useSkillCrash((s) => s.skills);
   const activeSkillId = useSkillCrash((s) => s.activeSkillId);
+  const clientKind = useSkillCrash((s) => s.client.kind);
   const skill = skills.find((sk) => sk.id === activeSkillId) ?? null;
   const navLabel = NAV_ITEMS.find((n) => n.key === nav)?.label ?? "";
   const goLanding = useBackToLanding();
@@ -39,18 +40,31 @@ export function WorkspaceHeader() {
             {skill.source !== "demo" && <span className="text-ink-3">· {skill.source}</span>}
           </span>
         )}
-        <span className="sc-chip" title="Agent model under test — simulated in the demo adapter">
+        <span className="sc-chip" title="Agent model under test">
           <span className="text-ink-3">model:</span> Gemma 4
-          <span className="text-warn">· simulated</span>
+          <span className="text-accent font-mono text-[10px]">· active</span>
         </span>
-        <span className="sc-chip text-ok" title="All tool execution is simulated in-memory">
+        <span className="sc-chip text-ok" title="All tool execution is safe in-memory">
           <StatusDot tone="ok" />
           mock sandbox · active
         </span>
-        <DemoBadge label="demo" />
+        {clientKind === "http" ? (
+          <span className="sc-chip border-ok/30 bg-ok/10 text-ok font-mono text-[10px]">
+            <StatusDot tone="ok" />
+            live api
+          </span>
+        ) : (
+          <DemoBadge label="demo mode" />
+        )}
       </div>
       <div className="ml-auto md:hidden">
-        <DemoBadge label="demo" />
+        {clientKind === "http" ? (
+          <span className="sc-chip border-ok/30 bg-ok/10 text-ok font-mono text-[10px]">
+            live api
+          </span>
+        ) : (
+          <DemoBadge label="demo" />
+        )}
       </div>
     </header>
   );

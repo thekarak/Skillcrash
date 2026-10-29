@@ -256,7 +256,7 @@ export const useSkillCrash = create<WorkspaceState>((set, get) => ({
         offeredExpectations: generated.defaultExpectations,
         selectedExpectations: generated.defaultExpectations,
         approvals: {},
-        selectedTestId: null,
+        selectedTestId: generated.tests[0]?.id ?? null,
         runsByTest: {},
         runHistory: [],
         generatorLabel: generated.label,
