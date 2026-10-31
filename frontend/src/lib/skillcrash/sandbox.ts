@@ -108,7 +108,7 @@ export function toolSpec(name: string): MockToolSpec | undefined {
 const PATH_ARGS = ["path", "from", "to"];
 
 function isSecretPath(value: string, policy: SandboxPolicy): boolean {
-  const leaf = value.split("/").filter(Boolean).pop() ?? value;
+  const leaf = value.split(/[\/\\]/).filter(Boolean).pop() ?? value;
   return policy.secretPatterns.some((p) => {
     try {
       return new RegExp(p, "i").test(leaf);
@@ -121,7 +121,7 @@ function isSecretPath(value: string, policy: SandboxPolicy): boolean {
 /** Normalize a path argument and check it stays inside the sandbox root. */
 function pathConfinement(value: string, policy: SandboxPolicy): { ok: boolean; reason?: string } {
   if (value.includes("..")) {
-    return { ok: false, reason: "Path contains `..` traversal — stays-outide-root policy." };
+    return { ok: false, reason: "Path contains `..` traversal — stays-outside-root policy." };
   }
   if (/^[a-zA-Z]+:\/\//.test(value)) {
     return { ok: false, reason: "Path argument looks like a URL, not a sandbox path." };

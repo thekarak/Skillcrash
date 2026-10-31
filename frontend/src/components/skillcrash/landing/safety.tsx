@@ -12,7 +12,7 @@ import { SectionHeader } from "../shared/section-header";
 const BOUNDARIES = [
   {
     title: "Allowlisted mock tools only",
-    body: "The agent can call six tools — read_file, write_file, delete_file, move_file, list_directory, upload_file — and nothing else. Unknown tools are rejected and recorded before any simulation runs.",
+    body: "The agent can call six tools — read_file, write_file, delete_path, move_path, list_dir, upload_file — and nothing else. Unknown tools are rejected and recorded before any simulation runs.",
   },
   {
     title: "Tool names and arguments validated",

@@ -59,7 +59,9 @@ export interface SceneMountResult {
   canvasRef: RefObject<HTMLCanvasElement | null>;
   failed: boolean;
 }
-export function useSceneMount({ factory, rebuildDeps = [] }: SceneMountOptions): SceneMountResult {
+const DEFAULT_REBUILD_DEPS: unknown[] = [];
+
+export function useSceneMount({ factory, rebuildDeps }: SceneMountOptions): SceneMountResult {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const factoryRef = useRef(factory);
   const [failed, setFailed] = useState(false);
@@ -68,6 +70,8 @@ export function useSceneMount({ factory, rebuildDeps = [] }: SceneMountOptions):
   useEffect(() => {
     factoryRef.current = factory;
   });
+
+  const deps = rebuildDeps ?? DEFAULT_REBUILD_DEPS;
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -127,7 +131,7 @@ export function useSceneMount({ factory, rebuildDeps = [] }: SceneMountOptions):
       document.removeEventListener("visibilitychange", onDocVisibility);
       controller?.dispose();
     };
-  }, rebuildDeps);
+  }, deps);
 
   return { canvasRef, failed };
 }

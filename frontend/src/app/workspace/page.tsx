@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { Suspense, useEffect, useRef } from "react";
+import { useSearchParams } from "next/navigation";
 import { useViewStore } from "@/lib/skillcrash/store";
 import { WorkspaceView } from "@/components/skillcrash/workspace/workspace-view";
 
@@ -11,27 +12,31 @@ import { WorkspaceView } from "@/components/skillcrash/workspace/workspace-view"
  *   /workspace                     open the workspace
  *   /workspace?test=TC-004         select a case
  *   /workspace?test=TC-004&run=1   select and auto-run it
- *
- * The URL intent is applied exactly once per navigation (tracked by ref) so it
- * never fights the workspace, which clears the intent after consuming it.
- * Client-side navigations from the landing page carry their intent through
- * the store instead, so nothing is overwritten here.
  */
-export default function WorkspacePage() {
+function WorkspaceParamsHandler() {
+  const searchParams = useSearchParams();
   const appliedRef = useRef<string | null>(null);
 
   useEffect(() => {
-    const key = window.location.search;
+    const key = searchParams ? searchParams.toString() : "";
     if (appliedRef.current === key) return;
     appliedRef.current = key;
 
-    const params = new URLSearchParams(key);
-    const testId = params.get("test");
+    const testId = searchParams ? searchParams.get("test") : null;
     if (testId && testId.startsWith("TC-")) {
-      const autorun = params.get("run") === "1";
+      const autorun = searchParams.get("run") === "1";
       useViewStore.getState().openWorkspace({ testId, autorun });
     }
-  }, []);
+  }, [searchParams]);
 
-  return <WorkspaceView />;
+  return null;
+}
+
+export default function WorkspacePage() {
+  return (
+    <Suspense fallback={<div className="h-screen w-screen bg-[#171613]" />}>
+      <WorkspaceParamsHandler />
+      <WorkspaceView />
+    </Suspense>
+  );
 }

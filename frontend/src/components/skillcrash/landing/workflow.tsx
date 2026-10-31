@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { WorkflowScene } from "../three/workflow-scene";
-import { prefersReducedMotion, useSceneMount } from "../three/use-scene";
+import { prefersReducedMotion, usePrefersReducedMotion, useSceneMount } from "../three/use-scene";
 import { PipelineFallback } from "../shared/pipeline-fallback";
 import { SectionHeader } from "../shared/section-header";
 import { cn } from "@/lib/utils";
@@ -87,16 +87,17 @@ export function Workflow() {
   const sceneRef = useRef<WorkflowScene | null>(null);
   const cardRef = useRef<HTMLDivElement | null>(null);
   const [progress, setProgress] = useState(0);
-  const [staticMode, setStaticMode] = useState(false);
+  const prefersReduced = usePrefersReducedMotion();
 
   const { canvasRef, failed } = useSceneMount({
     factory: (canvas) => {
       const scene = new WorkflowScene(canvas, { reducedMotion: prefersReducedMotion() });
       sceneRef.current = scene;
-      setStaticMode(prefersReducedMotion());
       return scene;
     },
   });
+
+  const staticMode = prefersReduced || failed;
 
   const activeIndex = Math.min(STAGES.length - 1, Math.floor(progress * STAGES.length));
   const active = STAGES[activeIndex];

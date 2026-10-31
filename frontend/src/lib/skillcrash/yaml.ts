@@ -42,7 +42,7 @@ export function parseSkillMarkdown(
   fileName?: string
 ): ParsedSkill {
   const issues: SkillParseIssue[] = [];
-  const text = typeof raw === "string" ? raw : "";
+  const text = (typeof raw === "string" ? raw : "").replace(/^\uFEFF/, "");
 
   if (text.trim().length === 0) {
     return {
