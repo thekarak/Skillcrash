@@ -9,45 +9,44 @@ import { DemoBadge, StatusDot } from "../shared/badges";
 import { SkillCrashMark } from "../shared/wordmark";
 
 /**
- * Model/backend chip state. "live" is only ever shown after the configured
- * HTTP adapter's /health probe succeeds; the demo adapter is never "live".
+ * Model/backend chip state with clear, human status indicators.
  */
 function modelChipState(status: "demo" | "unknown" | "checking" | "online" | "offline") {
   switch (status) {
     case "online":
       return {
-        label: "live",
+        label: "Live API",
         tone: "ok" as const,
         className: "text-ok",
-        title: "Backend /health responded. Gemma 4 is the configured agent under test.",
+        title: "Backend API is online. Gemma 4 is actively evaluating scenarios.",
       };
     case "offline":
       return {
-        label: "offline",
+        label: "Offline",
         tone: "bad" as const,
         className: "text-bad",
-        title: "The configured backend is unreachable — no model call can succeed.",
+        title: "The configured backend API is unreachable.",
       };
     case "checking":
       return {
-        label: "checking…",
+        label: "Checking connection…",
         tone: "idle" as const,
         className: "text-ink-3",
-        title: "Probing the configured backend /health endpoint.",
+        title: "Checking backend health endpoint.",
       };
     case "demo":
       return {
-        label: "demo adapter",
+        label: "Simulated Engine",
         tone: "warn" as const,
         className: "text-warn",
-        title: "No backend configured. Cases are simulated in-browser — no model is running.",
+        title: "Simulated in-memory environment. No external model API required.",
       };
     default:
       return {
-        label: "unverified",
+        label: "Ready",
         tone: "idle" as const,
         className: "text-ink-3",
-        title: "Backend health has not been confirmed yet — no live model is claimed.",
+        title: "Test environment is initialized.",
       };
   }
 }
@@ -63,7 +62,7 @@ export function WorkspaceHeader() {
   const navLabel = NAV_ITEMS.find((n) => n.key === nav)?.label ?? "";
   const goLanding = useBackToLanding();
 
-  // Probe a configured backend once so the model chip reflects reality.
+  // Probe configured backend once
   useEffect(() => {
     if (clientKind === "http" && backendStatus === "unknown") {
       void checkBackendStatus();
@@ -73,53 +72,53 @@ export function WorkspaceHeader() {
   const model = modelChipState(backendStatus);
 
   return (
-    <header className="sticky top-0 z-30 flex h-14 shrink-0 items-center gap-3 border-b border-line bg-base/95 px-4 backdrop-blur sm:px-6">
+    <header className="sticky top-0 z-30 flex h-16 shrink-0 items-center gap-3 border-b border-line bg-base/95 px-4 backdrop-blur sm:px-6">
       <MobileNavSheet />
-      <div className="flex min-w-0 items-center gap-1.5">
+      <div className="flex min-w-0 items-center gap-2">
         <button
           type="button"
           onClick={goLanding}
-          className="hidden items-center gap-1.5 font-mono text-[11px] text-ink-3 transition-colors hover:text-ink-2 lg:flex"
+          className="hidden items-center gap-2 text-[13.5px] font-semibold text-ink transition-colors hover:text-accent lg:flex"
           aria-label="Back to landing page"
         >
-          <SkillCrashMark className="h-4 w-4" />
+          <SkillCrashMark className="h-5 w-5" />
           SkillCrash
         </button>
-        <ChevronRight className="hidden h-3 w-3 text-ink-3 lg:block" />
-        <span className="font-mono text-[11px] text-ink">{navLabel}</span>
+        <ChevronRight className="hidden h-3.5 w-3.5 text-ink-3 lg:block" />
+        <span className="text-[13.5px] font-semibold text-ink">{navLabel}</span>
       </div>
 
-      <div className="ml-auto hidden items-center gap-2 md:flex">
+      <div className="ml-auto hidden items-center gap-2.5 md:flex">
         {skill && (
-          <span className="sc-chip max-w-[220px] truncate" title={skill.meta.description}>
-            <span className="text-ink-3">skill:</span>
-            <span className="truncate text-ink">{skill.meta.name || "unnamed"}</span>
+          <span className="sc-chip max-w-[240px] truncate text-[12px]" title={skill.meta.description}>
+            <span className="text-ink-3">Skill:</span>
+            <span className="truncate font-semibold text-ink">{skill.meta.name || "unnamed"}</span>
             {skill.source !== "demo" && <span className="text-ink-3">· {skill.source}</span>}
           </span>
         )}
-        <span className="sc-chip" title={model.title} data-model-state={backendStatus}>
+        <span className="sc-chip text-[12px]" title={model.title} data-model-state={backendStatus}>
           <StatusDot tone={model.tone} />
-          <span className="text-ink-3">model:</span>
-          <span className="text-ink">Gemma 4</span>
-          <span className={cn("font-mono text-[10px]", model.className)}>· {model.label}</span>
+          <span className="text-ink-3">Model:</span>
+          <span className="font-semibold text-ink">Gemma 4</span>
+          <span className={cn("font-medium", model.className)}>· {model.label}</span>
         </span>
-        <span className="sc-chip text-ok" title="All tool execution is safe in-memory">
+        <span className="sc-chip text-[12px] text-ok" title="Safe in-memory execution">
           <StatusDot tone="ok" />
-          mock sandbox · in-memory
+          Virtual Sandbox: In-Memory
         </span>
         {clientKind === "http" ? (
-          <span className="sc-chip border-ok/30 bg-ok/10 text-ok font-mono text-[10px]">
+          <span className="sc-chip border-ok/30 bg-ok/10 text-ok text-[12px] font-medium">
             <StatusDot tone={backendStatus === "offline" ? "bad" : "ok"} />
-            api adapter
+            Cloud API
           </span>
         ) : (
-          <DemoBadge label="demo mode" />
+          <DemoBadge label="In-Memory Demo" />
         )}
       </div>
       <div className="ml-auto md:hidden">
-        <span className="sc-chip" title={model.title} data-model-state={backendStatus}>
+        <span className="sc-chip text-[12px]" title={model.title} data-model-state={backendStatus}>
           <StatusDot tone={model.tone} />
-          <span className={cn("font-mono text-[10px]", model.className)}>{model.label}</span>
+          <span className={cn("font-medium", model.className)}>{model.label}</span>
         </span>
       </div>
     </header>

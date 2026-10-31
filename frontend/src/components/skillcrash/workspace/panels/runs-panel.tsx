@@ -1,7 +1,6 @@
 "use client";
 
-import { BrainCircuit, Boxes, Gauge, ShieldCheck, Timer, Trash2 } from "lucide-react";
-import { Slider } from "@/components/ui/slider";
+import { BrainCircuit, Boxes, Gauge, ShieldCheck, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useSkillCrash } from "@/lib/skillcrash/store";
 import { MOCK_TOOLS } from "@/lib/skillcrash/sandbox";
@@ -23,13 +22,12 @@ export function RunsPanel() {
   const hasRuns = Object.keys(runsByTest).length > 0;
 
   return (
-    <div className="mx-auto w-full max-w-[1400px] space-y-4 p-4 sm:space-y-5 sm:p-6">
+    <div className="mx-auto w-full max-w-[1400px] space-y-5 p-4 sm:space-y-6 sm:p-6">
       <header className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-lg font-semibold tracking-tight text-ink">Test Runs</h1>
-          <p className="mt-0.5 text-[13px] text-ink-2">
-            Load a skill, generate adversarial cases, approve expected behaviour, and replay the
-            evidence.
+          <h1 className="text-xl font-bold tracking-tight text-ink sm:text-2xl">Adversarial Test Runs</h1>
+          <p className="mt-1 text-[14.5px] leading-relaxed text-ink-2">
+            Load an agent skill, generate targeted attack scenarios, approve expected safety rules, and inspect execution evidence.
           </p>
         </div>
         {hasRuns && (
@@ -37,17 +35,16 @@ export function RunsPanel() {
             type="button"
             size="sm"
             variant="outline"
-            className="border-bad/30 bg-bad/10 text-bad hover:bg-bad/20 hover:text-bad font-medium transition cursor-pointer"
+            className="border-bad/30 bg-bad/10 text-bad hover:bg-bad/20 hover:text-bad font-medium transition cursor-pointer text-[13px]"
             onClick={resetRuns}
             title="Reset and clear all test run records"
           >
-            <Trash2 className="h-3.5 w-3.5" /> Clear all test runs
+            <Trash2 className="h-4 w-4 mr-1.5" /> Clear All Test Runs
           </Button>
         )}
       </header>
 
-      {/* skill meta gets the wider share — the execution card only needs a
-          readable definition list, and 5/12 keeps its rows on one line at 1366px */}
+      {/* skill meta + execution config */}
       <div className="grid gap-4 sm:gap-5 xl:grid-cols-[minmax(0,7fr)_minmax(0,5fr)]">
         <SkillPanel />
         <ExecutionConfigCard />
@@ -65,117 +62,69 @@ export function RunsPanel() {
 }
 
 function ExecutionConfigCard() {
-  const policy = useSkillCrash((s) => s.policy);
-  const setStepLimit = useSkillCrash((s) => s.setStepLimit);
   const clientKind = useSkillCrash((s) => s.client.kind);
   const clientLabel = useSkillCrash((s) => s.client.statusLabel);
-  const backendTurnBudget = useSkillCrash((s) => s.backendTurnBudget);
 
   return (
-    <section aria-label="Execution configuration" className="sc-panel p-4 sm:p-5">
-      <h2 className="mb-1 flex items-center gap-2 text-sm font-semibold text-ink">
+    <section aria-label="Runtime and safety environment" className="sc-panel p-4 sm:p-5">
+      <h2 className="mb-1 flex items-center gap-2 text-base font-semibold text-ink">
         <Gauge className="h-4 w-4 text-accent" strokeWidth={2} />
-        Execution configuration
+        Runtime &amp; Safety Environment
       </h2>
-      <p className="mb-4 text-[12px] leading-relaxed text-ink-3">
+      <p className="mb-4 text-[13px] leading-relaxed text-ink-3">
         {clientKind === "http"
-          ? "Approved cases are executed by the live backend agent. Tool calls stay inside an in-memory mock sandbox, and the judge reads only your approved rules."
-          : "How this run executes. Nothing here reaches a real filesystem, credentials or network."}
+          ? "Approved scenarios are evaluated by the backend agent in an in-memory mock sandbox with deterministic scoring."
+          : "Safe execution environment. No actions affect your real disk, system files, credentials, or network."}
       </p>
 
-      <dl className="space-y-2.5 text-[12px]">
+      <dl className="space-y-3 text-[13px]">
         <div className="flex items-start justify-between gap-3">
-          <dt className="flex shrink-0 items-center gap-1.5 text-ink-2">
-            <BrainCircuit className="h-3.5 w-3.5 text-ink-3" /> Agent under test
+          <dt className="flex shrink-0 items-center gap-1.5 text-ink-2 font-medium">
+            <BrainCircuit className="h-4 w-4 text-ink-3" /> Agent Under Test
           </dt>
-          <dd className="min-w-0 text-right font-mono text-[11px] break-words">
+          <dd className="min-w-0 text-right text-[12.5px] break-words font-medium">
             Gemma 4{" "}
             {clientKind === "http" ? (
-              <span
-                className="text-ok"
-                title="Approved cases are executed by the FastAPI backend against live Gemma 4. Tool calls are still confined to the backend's in-memory mock sandbox."
-              >
-                · live backend
-              </span>
+              <span className="text-ok font-semibold">· Live Backend</span>
             ) : (
-              <span
-                className="text-warn"
-                title="Runs replay a deterministic scripted agent through the local mock sandbox — no live model inference is performed here."
-              >
-                · simulated replay
-              </span>
+              <span className="text-warn font-semibold">· In-Browser Simulation</span>
             )}
           </dd>
         </div>
         <div className="flex items-start justify-between gap-3">
-          <dt className="flex shrink-0 items-center gap-1.5 text-ink-2">
-            <Boxes className="h-3.5 w-3.5 text-ink-3" /> Mock tools
+          <dt className="flex shrink-0 items-center gap-1.5 text-ink-2 font-medium">
+            <Boxes className="h-4 w-4 text-ink-3" /> Virtual Tools
           </dt>
-          <dd className="min-w-0 text-right font-mono text-[11px] break-words text-ink-2">
-            {MOCK_TOOLS.length} allowlisted · in-memory
+          <dd className="min-w-0 text-right text-[12.5px] break-words text-ink-2 font-medium">
+            {MOCK_TOOLS.length} Safe Tools (In-Memory)
           </dd>
         </div>
         <div className="flex items-start justify-between gap-3">
-          <dt className="flex shrink-0 items-center gap-1.5 text-ink-2">
-            <ShieldCheck className="h-3.5 w-3.5 text-ink-3" /> Judge
+          <dt className="flex shrink-0 items-center gap-1.5 text-ink-2 font-medium">
+            <ShieldCheck className="h-4 w-4 text-ink-3" /> Verification Engine
           </dt>
-          <dd className="min-w-0 text-right font-mono text-[11px] break-words text-ink-2">
-            deterministic · separate from model
+          <dd className="min-w-0 text-right text-[12.5px] break-words text-ink-2 font-medium">
+            Deterministic Rule Assertions
           </dd>
         </div>
         <div className="flex items-start justify-between gap-3">
-          <dt className="flex shrink-0 items-center gap-1.5 text-ink-2">
-            <Boxes className="h-3.5 w-3.5 text-ink-3" /> Backend
+          <dt className="flex shrink-0 items-center gap-1.5 text-ink-2 font-medium">
+            <Boxes className="h-4 w-4 text-ink-3" /> Active Adapter
           </dt>
           <dd className="flex min-w-0 flex-col items-end gap-1">
             {clientKind === "http" ? (
-              <span className="sc-chip border-ok/30 bg-ok/10 text-ok font-mono text-[10px]">
-                HTTP ADAPTER
+              <span className="sc-chip border-ok/30 bg-ok/10 text-ok font-semibold text-[11px]">
+                Cloud API Adapter
               </span>
             ) : (
-              <DemoBadge label="demo adapter" />
+              <DemoBadge label="In-Memory Demo Engine" />
             )}
-            <span className="max-w-[220px] text-right font-mono text-[10px] leading-snug break-words text-ink-3">
+            <span className="max-w-[240px] text-right text-[11px] leading-snug break-words text-ink-3">
               {clientLabel}
             </span>
           </dd>
         </div>
       </dl>
-
-      <div className="mt-4 rounded-md border border-line bg-raised p-3">
-        <div className="mb-2 flex items-center justify-between">
-          <span className="flex items-center gap-1.5 text-[12px] text-ink-2">
-            <Timer className="h-3.5 w-3.5 text-ink-3" />
-            {clientKind === "http" ? "Simulated replay step limit" : "Step limit"}
-          </span>
-          <span className="font-mono text-[11px] text-accent">{policy.maxSteps} steps</span>
-        </div>
-        {/* The slider root reserves its own height (h-5) so the thumb can never
-            overflow into the caption below it, at any viewport width. */}
-        <Slider
-          className="mt-0.5"
-          value={[policy.maxSteps]}
-          min={2}
-          max={16}
-          step={1}
-          onValueChange={(v) => setStepLimit(v[0] ?? policy.maxSteps)}
-          aria-label="Agent step limit"
-        />
-        <p className="mt-3 font-mono text-[10px] leading-relaxed text-ink-3">
-          {clientKind === "http" ? (
-            <>
-              Applies to locally replayed traces. Live runs are bounded by the backend&apos;s own{" "}
-              {backendTurnBudget ? `${backendTurnBudget}-turn` : "fixed"} agent budget — exceeding it
-              ends the run in a controlled ERROR.
-            </>
-          ) : (
-            <>
-              Runs that exceed the limit end in a controlled ERROR — lower it and re-run a case to
-              see that state.
-            </>
-          )}
-        </p>
-      </div>
     </section>
   );
 }

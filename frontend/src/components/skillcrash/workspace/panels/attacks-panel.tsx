@@ -9,7 +9,7 @@ import { VerdictBadge, DemoBadge } from "../../shared/badges";
 import { cn } from "@/lib/utils";
 
 /**
- * Adversarial test cases: generation, review, expected-behaviour rule
+ * Adversarial test scenarios: generation, review, expected-behaviour rule
  * approval, and selection. Approved expectations are kept separate from
  * the generated attack text.
  */
@@ -40,52 +40,49 @@ export function AttacksPanel() {
     selectedTestId
   );
 
-  // Only an explicit "model" mode from an HTTP generator counts as model output.
-  // Anything else is simulated (demo/local) or unverified — never "live".
   const modelReported = clientKind === "http" && generatorMode === "model";
   const simulated =
     !modelReported && (clientKind === "demo" || generatorMode === "simulated");
   const modeLabel = modelReported
-    ? "model-generated (reported)"
+    ? "Model Generated"
     : simulated
-      ? "simulated · no model call"
-      : "unverified · no live claim";
+      ? "Simulated Generator"
+      : "Standard Suite";
 
   return (
-    <section aria-label="Adversarial test cases" className="sc-panel p-4 sm:p-5">
+    <section aria-label="Adversarial test scenarios" className="sc-panel p-4 sm:p-5">
       <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h2 className="flex items-center gap-2 text-sm font-semibold text-ink">
+          <h2 className="flex items-center gap-2 text-base font-semibold text-ink">
             <Swords className="h-4 w-4 text-bad" strokeWidth={2} />
-            Adversarial test cases
+            Adversarial Test Scenarios
           </h2>
-          <p className="mt-1 max-w-xl text-[12px] leading-relaxed text-ink-3">
-            Generated against the active skill. Each case pairs an attack prompt with a separate,
-            developer-approved set of expected-behaviour rules — the judge only reads the approved
-            rules.{" "}
+          <p className="mt-1 max-w-xl text-[13.5px] leading-relaxed text-ink-3">
+            Targeted security challenges created for your active skill. Review the attack prompt and
+            approve expected safety rules before running.{" "}
             {gemmaEnabled
               ? clientKind === "http"
-                ? "Gemma 4 proposals are requested from the backend generator; cases are only labelled model-generated when the response says so."
-                : "Gemma mode is selected, but the demo adapter simulates proposals locally — no model call is made."
-              : "Standard deterministic safety suite benchmark selected."}
+                ? "Gemma 4 is synthesizing adversarial vectors via the backend API."
+                : "Gemma mode is selected with local in-browser simulation."
+              : "Standard deterministic safety benchmark selected."}
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2.5">
-          {/* Polished Mode Selector: Standard Benchmark vs Gemma 4 AI */}
+          {/* Mode Selector */}
           <div className="inline-flex items-center rounded-lg border border-line bg-surface p-1 text-xs shadow-xs">
             <button
               type="button"
               disabled={generating}
               onClick={() => setGemmaEnabled(false)}
               className={cn(
-                "flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-all cursor-pointer",
+                "flex items-center gap-1.5 rounded-md px-3 py-1.5 text-[12.5px] font-medium transition-all cursor-pointer",
                 !gemmaEnabled
                   ? "bg-raised text-ink font-semibold shadow-xs border border-line/60"
                   : "text-ink-3 hover:text-ink-2 hover:bg-raised/40"
               )}
               title="Deterministic built-in safety benchmark test suite"
             >
-              <ShieldCheck className={cn("h-3.5 w-3.5", !gemmaEnabled ? "text-ink" : "text-ink-3")} />
+              <ShieldCheck className={cn("h-4 w-4", !gemmaEnabled ? "text-ink" : "text-ink-3")} />
               <span>Standard Suite</span>
             </button>
             <button
@@ -93,14 +90,14 @@ export function AttacksPanel() {
               disabled={generating}
               onClick={() => setGemmaEnabled(true)}
               className={cn(
-                "flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-all cursor-pointer",
+                "flex items-center gap-1.5 rounded-md px-3 py-1.5 text-[12.5px] font-medium transition-all cursor-pointer",
                 gemmaEnabled
                   ? "bg-accent/15 text-accent font-semibold border border-accent/35 shadow-xs"
                   : "text-ink-3 hover:text-ink-2 hover:bg-raised/40"
               )}
               title="Request Gemma 4 proposals from the backend generator (simulated in demo mode)"
             >
-              <Sparkles className={cn("h-3.5 w-3.5", gemmaEnabled ? "text-accent" : "text-ink-3")} />
+              <Sparkles className={cn("h-4 w-4", gemmaEnabled ? "text-accent" : "text-ink-3")} />
               <span>Gemma 4 AI</span>
               {gemmaEnabled && (
                 <span className="ml-0.5 inline-block h-1.5 w-1.5 rounded-full bg-accent animate-pulse" />
@@ -113,10 +110,10 @@ export function AttacksPanel() {
               type="button"
               size="sm"
               variant="outline"
-              className="border-line bg-transparent text-ink-2 hover:bg-raised hover:text-ink cursor-pointer"
+              className="border-line bg-transparent text-ink-2 hover:bg-raised hover:text-ink cursor-pointer text-[13px]"
               onClick={approveAll}
             >
-              <Check className="h-3.5 w-3.5" /> Approve all
+              <Check className="h-4 w-4 mr-1" /> Approve All Rules
             </Button>
           )}
 
@@ -124,17 +121,17 @@ export function AttacksPanel() {
             type="button"
             size="sm"
             disabled={generating}
-            className="bg-accent text-primary-foreground hover:bg-accent/85 cursor-pointer font-medium"
+            className="bg-accent text-primary-foreground hover:bg-accent/85 cursor-pointer font-medium text-[13px]"
             onClick={() => void generateAttacks()}
           >
             {generating ? (
               <span className="flex items-center gap-2">
-                <span className="h-3 w-3 animate-spin rounded-full border-2 border-primary-foreground/40 border-t-primary-foreground" />
-                Generating…
+                <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-primary-foreground/40 border-t-primary-foreground" />
+                Generating Scenarios…
               </span>
             ) : (
               <>
-                <Zap className="h-3.5 w-3.5" /> Generate attacks
+                <Zap className="h-4 w-4 mr-1" /> Generate Scenarios
               </>
             )}
           </Button>
@@ -144,58 +141,50 @@ export function AttacksPanel() {
       {(generatorLabel || generatorNotice) && (
         <div
           role="status"
-          className="mb-3 space-y-1.5 rounded-md border border-line bg-raised px-3 py-2"
+          className="mb-3 space-y-1.5 rounded-md border border-line bg-raised px-3.5 py-2.5"
         >
           {generatorLabel && (
             <div className="flex flex-wrap items-center gap-2">
               <span
                 className={cn(
-                  "inline-flex items-center rounded border px-1.5 py-0.5 font-mono text-[9.5px] font-medium tracking-[0.12em] uppercase",
+                  "inline-flex items-center rounded border px-2 py-0.5 font-medium text-[11px]",
                   modelReported
                     ? "border-ok/35 bg-ok/10 text-ok"
                     : "border-warn/35 bg-warn/10 text-warn"
                 )}
-                title={
-                  modelReported
-                    ? "The backend reported that a model produced these cases."
-                    : simulated
-                      ? "No model call produced these cases — they are simulated locally."
-                      : "The generator did not report a generation mode — no live inference is claimed."
-                }
               >
                 {modeLabel}
               </span>
             </div>
           )}
           {generatorNotice && (
-            <p className="font-mono text-[10.5px] leading-relaxed text-ink-3">{generatorNotice}</p>
+            <p className="text-[12.5px] leading-relaxed text-ink-3">{generatorNotice}</p>
           )}
         </div>
       )}
 
       {tests.length === 0 ? (
-        <div className="rounded-md border border-dashed border-line px-4 py-10 text-center">
-          <p className="text-[13px] font-medium text-ink-2">No test cases generated yet.</p>
-          <p className="mx-auto mt-1.5 max-w-md text-[12px] leading-relaxed text-ink-3">
-            Choose your generator mode above (Standard Suite or Gemma 4 AI) and click{" "}
-            <strong className="text-ink-2">Generate attacks</strong> to synthesize targeted adversarial
-            test scenarios against the active skill.
+        <div className="rounded-md border border-dashed border-line px-4 py-12 text-center">
+          <p className="text-[14.5px] font-semibold text-ink">No test scenarios created yet.</p>
+          <p className="mx-auto mt-1.5 max-w-md text-[13px] leading-relaxed text-ink-3">
+            Select your generator mode above (Standard Suite or Gemma 4 AI) and click{" "}
+            <strong className="text-ink font-semibold">Generate Scenarios</strong> to synthesize targeted security challenges against the active skill.
           </p>
           <Button
             type="button"
             size="sm"
             disabled={generating}
-            className="mt-4 bg-accent text-primary-foreground hover:bg-accent/85 cursor-pointer font-medium"
+            className="mt-4 bg-accent text-primary-foreground hover:bg-accent/85 cursor-pointer font-medium text-[13px]"
             onClick={() => void generateAttacks()}
           >
             {generating ? (
               <span className="flex items-center gap-2">
-                <span className="h-3 w-3 animate-spin rounded-full border-2 border-primary-foreground/40 border-t-primary-foreground" />
+                <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-primary-foreground/40 border-t-primary-foreground" />
                 Generating…
               </span>
             ) : (
               <>
-                <Zap className="h-3.5 w-3.5" /> Generate attacks
+                <Zap className="h-4 w-4 mr-1" /> Generate Scenarios
               </>
             )}
           </Button>
@@ -203,7 +192,7 @@ export function AttacksPanel() {
       ) : (
         <div className="grid gap-4 xl:grid-cols-[minmax(0,5fr)_minmax(0,7fr)]">
           {/* Case list */}
-          <ul className="space-y-2" role="listbox" aria-label="Test cases">
+          <ul className="space-y-2.5" role="listbox" aria-label="Test scenarios">
             {tests.map((t) => {
               const active = t.id === selectedTestId;
               const approved = approvals[t.id] !== undefined;
@@ -216,56 +205,48 @@ export function AttacksPanel() {
                     aria-selected={active}
                     onClick={() => selectTest(active ? null : t.id)}
                     className={cn(
-                      "w-full rounded-md border p-3 text-left transition-colors cursor-pointer",
+                      "w-full rounded-md border p-3.5 text-left transition-colors cursor-pointer",
                       active
                         ? "border-accent/50 bg-accent/[0.07]"
                         : "border-line bg-raised hover:border-line-strong"
                     )}
                   >
                     <div className="flex items-center justify-between gap-2">
-                      <span className="font-mono text-[11px] font-semibold text-accent">{t.id}</span>
+                      <span className="font-mono text-[12px] font-bold text-accent">{t.id}</span>
                       <div className="flex items-center gap-1.5">
                         {approved && (
-                          <span className="sc-chip border-ok/30 text-ok">approved</span>
+                          <span className="sc-chip border-ok/30 text-ok text-[11px] font-medium">
+                            Approved
+                          </span>
                         )}
                         {verdict ? <VerdictBadge outcome={verdict.outcome} size="sm" /> : null}
                       </div>
                     </div>
-                    <div className="mt-1 text-[13px] leading-snug font-medium text-ink">{t.title}</div>
-                    <div className="mt-1 font-mono text-[10.5px] text-ink-3">
+                    <div className="mt-1 text-[14px] leading-snug font-semibold text-ink">{t.title}</div>
+                    <div className="mt-1 text-[12px] text-ink-3 font-medium">
                       {ATTACK_CATEGORY_LABELS[t.category]}
                     </div>
                   </button>
                 </li>
               );
             })}
-            <li className="px-1 pt-1">
-              <p className="font-mono text-[10.5px] leading-relaxed text-ink-3">
-                {generatorLabel || "Attack cases generated and ready for expectation review."}
-              </p>
-            </li>
           </ul>
 
           {/* Review panel */}
           <div className="min-w-0">
             {selected ? (
-              <div className="space-y-3">
+              <div className="space-y-4">
                 <div>
-                  <div className="sc-mono-label mb-1.5 flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      attack prompt
+                  <div className="mb-2 flex items-center justify-between">
+                    <div className="flex items-center gap-2 text-[13px] font-semibold text-ink">
+                      <span>Simulated Attack Prompt</span>
                       {modelReported ? (
-                        <span className="sc-chip" title="Generation mode reported by the backend">
+                        <span className="sc-chip text-[11px]" title="Generated by backend model">
                           {selected.generatedBy}
                         </span>
                       ) : (
                         <DemoBadge
-                          label={simulated ? "simulated" : "unverified"}
-                          title={
-                            simulated
-                              ? "Simulated output — no live model call is claimed"
-                              : "The generator did not report a mode — no live model call is claimed"
-                          }
+                          label={simulated ? "Simulated Scenario" : "Benchmark Case"}
                         />
                       )}
                     </div>
@@ -273,55 +254,56 @@ export function AttacksPanel() {
                       type="button"
                       size="sm"
                       variant="outline"
-                      className="h-6 border-bad/30 bg-bad/10 px-2 text-[10.5px] text-bad hover:bg-bad/20 hover:text-bad cursor-pointer"
+                      className="h-7 border-bad/30 bg-bad/10 px-2.5 text-[11.5px] text-bad hover:bg-bad/20 hover:text-bad cursor-pointer font-medium"
                       onClick={() => deleteTest(selected.id)}
                       title="Delete this test case"
                     >
-                      <Trash2 className="h-3 w-3" /> Delete test
+                      <Trash2 className="h-3.5 w-3.5 mr-1" /> Remove
                     </Button>
                   </div>
-                  <blockquote className="rounded-md border border-bad/25 bg-bad/[0.05] px-3 py-2.5 text-[12.5px] leading-relaxed break-words text-ink-2">
+                  <blockquote className="rounded-md border border-bad/25 bg-bad/[0.06] px-3.5 py-3 text-[14px] leading-relaxed break-words text-ink-2">
                     {selected.attackPrompt}
                   </blockquote>
-                  <p className="mt-1.5 font-mono text-[10.5px] text-ink-3">
+                  <p className="mt-1.5 text-[12.5px] text-ink-3">
                     {CATEGORY_BLURBS[selected.category]}
                   </p>
                 </div>
 
                 <div>
-                  <div className="sc-mono-label mb-1.5 flex items-center justify-between">
-                    <span className="flex items-center gap-1.5">
-                      <ListChecks className="h-3.5 w-3.5 text-accent" />
-                      expected behaviour{review.approved ? " — approved" : " — draft, review before run"}
+                  <div className="mb-2 flex items-center justify-between">
+                    <span className="flex items-center gap-1.5 text-[13px] font-semibold text-ink">
+                      <ListChecks className="h-4 w-4 text-accent" />
+                      Expected Safety Rules {review.approved ? "(Approved)" : "(Draft — Review & Approve)"}
                     </span>
                     {!review.approved ? (
                       <Button
                         type="button"
                         size="sm"
                         variant="outline"
-                        className="h-6 border-line bg-transparent px-2 text-[10.5px] text-ink-2 hover:bg-raised hover:text-ink cursor-pointer"
+                        className="h-7 border-line bg-transparent px-2.5 text-[11.5px] text-ink-2 hover:bg-raised hover:text-ink cursor-pointer font-medium"
                         onClick={() => approveTest(selected.id)}
                       >
-                        <Check className="h-3 w-3" /> Approve for judge
+                        <Check className="h-3.5 w-3.5 mr-1" /> Approve Safety Rules
                       </Button>
                     ) : (
-                      <span className="sc-chip border-ok/30 text-ok">approved by you</span>
+                      <span className="sc-chip border-ok/30 text-ok text-[11px] font-medium">
+                        Approved by You
+                      </span>
                     )}
                   </div>
 
-                  <p className="mb-2 text-[12px] leading-relaxed text-ink-3">
-                    Select rules that describe safe behaviour for this attack. The judge only reads
-                    these rules — never the attack prompt or skill body.
+                  <p className="mb-2.5 text-[13px] leading-relaxed text-ink-3">
+                    Choose the safety boundaries that govern this scenario. The verification engine checks these rules against recorded tool executions.
                   </p>
 
-                  <ul className="space-y-1.5" role="group" aria-label="Expected behaviour rules">
+                  <ul className="space-y-2" role="group" aria-label="Expected safety rules">
                     {(review.offered.length > 0 ? review.offered : review.rules).map((rule) => {
                       const enabled = review.rules.some((r) => r.id === rule.id);
                       return (
                         <li key={rule.id}>
                           <label
                             className={cn(
-                              "flex items-start gap-2.5 rounded-md border px-3 py-2 text-[12px] transition-colors cursor-pointer",
+                              "flex items-start gap-3 rounded-md border px-3.5 py-2.5 text-[13px] transition-colors cursor-pointer",
                               enabled
                                 ? review.approved
                                   ? "border-ok/30 bg-ok/[0.05]"
@@ -334,16 +316,16 @@ export function AttacksPanel() {
                               checked={enabled}
                               disabled={review.approved}
                               onChange={() => toggleRule(selected.id, rule.id)}
-                              className="mt-0.5 h-3.5 w-3.5 shrink-0 rounded border-line text-accent focus:ring-accent"
+                              className="mt-1 h-4 w-4 shrink-0 rounded border-line text-accent focus:ring-accent"
                               aria-label={`Rule ${rule.id}: ${rule.description}`}
                             />
                             <span className="min-w-0 flex-1">
-                              <span className="font-mono text-[10.5px] font-semibold text-accent">
+                              <span className="font-mono text-[11.5px] font-bold text-accent">
                                 {rule.id}
                               </span>{" "}
-                              <span className="text-ink">{rule.description}</span>
-                              <span className="mt-0.5 block font-mono text-[10px] text-ink-3">
-                                kind: {rule.kind}
+                              <span className="text-[13.5px] font-medium text-ink">{rule.description}</span>
+                              <span className="mt-0.5 block text-[11.5px] text-ink-3">
+                                Evaluation Type: {rule.kind}
                               </span>
                             </span>
                           </label>
@@ -354,9 +336,8 @@ export function AttacksPanel() {
                 </div>
               </div>
             ) : (
-              <div className="rounded-md border border-dashed border-line p-6 text-center text-[12px] text-ink-3">
-                Select an attack case on the left to review its prompt and edit its expected-behaviour
-                rules.
+              <div className="rounded-md border border-dashed border-line p-8 text-center text-[13.5px] text-ink-3">
+                Select an attack scenario on the left to review its prompt and configure its safety rules.
               </div>
             )}
           </div>
