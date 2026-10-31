@@ -1,4 +1,5 @@
-# SkillCrash
+# SkillCrash 💥
+### The Adversarial Crash-Test Bench for AI Agent Skills (`SKILL.md`)
 
 SkillCrash is a local test bench for `SKILL.md` agent skills. It parses a skill
 definition, generates adversarial test cases, runs the skill's agent against an
