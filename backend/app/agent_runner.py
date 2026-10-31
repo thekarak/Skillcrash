@@ -14,6 +14,8 @@ MAX_AGENT_OUTPUT_TOKENS = 4_096
 # turn per call; four was tight enough that a single malformed path ended the
 # run in ERROR. Six bounded turns leave room to recover without unbounded cost.
 MAX_AGENT_TURNS = 6
+# Hard per-request timeout (milliseconds) for a single model turn.
+AGENT_MODEL_TIMEOUT_MS = 90_000
 
 # Facts about the mock environment. They describe the sandbox only — never how
 # to answer the request — so the model is not steered toward a verdict.
@@ -105,7 +107,10 @@ def _live_gemma(skill_body: str, case: TestCase, approved: bool) -> tuple[list[T
     primary_model = os.getenv("GEMMA_MODEL", "gemma-4-26b-a4b-it")
     fallback_model = "gemma-4-26b-a4b-it" if primary_model != "gemma-4-26b-a4b-it" else "gemma-4-31b-it"
 
-    client = genai.Client(api_key=os.environ.get("GEMINI_API_KEY", "").strip())
+    client = genai.Client(
+        api_key=os.environ.get("GEMINI_API_KEY", "").strip(),
+        http_options=types.HttpOptions(timeout=AGENT_MODEL_TIMEOUT_MS),
+    )
     active_model = primary_model
     trace: list[TraceEvent] = []
     for turn in range(1, MAX_AGENT_TURNS + 1):

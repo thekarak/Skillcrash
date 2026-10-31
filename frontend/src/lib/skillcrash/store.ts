@@ -23,6 +23,7 @@ import { judgeRun } from "./judge";
 import {
   createSkillCrashClient,
   getDefaultBackendUrl,
+  normalizeBackendUrl,
   setStoredBackendUrl,
   type GenerationMode,
   type SkillCrashClient,
@@ -109,6 +110,11 @@ interface WorkspaceState {
   backendDetail: string;
   /** Agent turn budget reported by the backend, when it reports one. */
   backendUrl: string;
+  /**
+   * What the backend's `/health` says about live inference. `null` until it
+   * has answered. `demo` means the backend is up but has no model configured.
+   */
+  backendMode: "live" | "demo" | null;
   backendTurnBudget: number | null;
   /** Probe the configured adapter. Resolves to the human-readable detail. */
   checkBackendStatus: () => Promise<string>;
@@ -192,33 +198,53 @@ export const useSkillCrash = create<WorkspaceState>((set, get) => ({
   backendStatus: initialClient.kind === "demo" ? "demo" : "unknown",
   backendDetail: initialClient.statusLabel,
   backendUrl: initialClient.baseUrl ?? getDefaultBackendUrl(),
+  backendMode: null,
   backendTurnBudget: null,
   setBackendUrl: async (url: string) => {
-    const trimmed = url.trim();
-    setStoredBackendUrl(trimmed || null);
-    const newClient = createSkillCrashClient(trimmed || null);
-    set({
-      client: newClient,
-      backendUrl: trimmed,
-      backendStatus: newClient.kind === "demo" ? "demo" : "checking",
-      backendDetail: newClient.statusLabel,
-    });
-    if (newClient.kind === "demo") {
-      return { ok: true, detail: "Switched to offline benchmark mode." };
+    const raw = url.trim();
+    if (raw) {
+      const normalized = normalizeBackendUrl(raw);
+      if (!normalized) {
+        const detail = `"${raw}" is not a valid backend URL. Use an http(s) URL such as https://your-service.onrender.com.`;
+        set({ backendStatus: "offline", backendDetail: detail, backendMode: null });
+        return { ok: false, detail };
+      }
+      setStoredBackendUrl(normalized);
+      const newClient = createSkillCrashClient(normalized);
+      set({
+        client: newClient,
+        backendUrl: normalized,
+        backendStatus: "checking",
+        backendMode: null,
+        backendDetail: newClient.statusLabel,
+      });
+      const health = await newClient.health();
+      set({
+        backendStatus: health.ok ? "online" : "offline",
+        backendMode: health.mode ?? null,
+        backendDetail: health.detail,
+        backendTurnBudget: health.maxAgentTurns ?? null,
+      });
+      return health;
     }
-    const health = await newClient.health();
+
+    setStoredBackendUrl(null);
+    const demoClient = createSkillCrashClient(null);
     set({
-      backendStatus: health.ok ? "online" : "offline",
-      backendDetail: health.detail,
-      backendTurnBudget: health.maxAgentTurns ?? null,
+      client: demoClient,
+      backendUrl: "",
+      backendStatus: "demo",
+      backendMode: null,
+      backendDetail: demoClient.statusLabel,
+      backendTurnBudget: null,
     });
-    return health;
+    return { ok: true, detail: "Switched to offline benchmark mode." };
   },
   checkBackendStatus: async () => {
     const { client } = get();
     const current = get().backendStatus;
     if (client.kind === "demo") {
-      set({ backendStatus: "demo", backendDetail: client.statusLabel, backendTurnBudget: null });
+      set({ backendStatus: "demo", backendMode: null, backendDetail: client.statusLabel, backendTurnBudget: null });
       return client.statusLabel;
     }
     if (current === "checking") return get().backendDetail;
@@ -226,6 +252,7 @@ export const useSkillCrash = create<WorkspaceState>((set, get) => ({
     const result = await client.health();
     set({
       backendStatus: result.ok ? "online" : "offline",
+      backendMode: result.mode ?? null,
       backendDetail: result.detail,
       backendTurnBudget: result.maxAgentTurns ?? null,
     });

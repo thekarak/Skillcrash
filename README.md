@@ -276,6 +276,8 @@ API key or network access.
 
 ## Deployment
 
+### Backend on Render
+
 `render.yaml` defines a Render web service for the backend:
 
 ```text
@@ -284,9 +286,46 @@ buildCommand: pip install -r requirements.txt
 startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
 ```
 
-Set `GEMINI_API_KEY` and, if needed, `CORS_ORIGINS` in the Render dashboard.
-The frontend can be deployed to any Next.js host; set
-`NEXT_PUBLIC_SKILLCRASH_API` to the deployed backend URL at build time.
+Set these environment variables in the Render dashboard:
+
+| Variable | Value |
+| --- | --- |
+| `GEMINI_API_KEY` | Your Google AI Studio key. |
+| `SKILLCRASH_USE_GEMMA` | `1` |
+| `GEMMA_MODEL` | `gemma-4-26b-a4b-it` (or another model available to your key). |
+| `CORS_ORIGINS` | Optional. Comma-separated extra origins, needed for a custom frontend domain. `*.vercel.app` and `*.onrender.com` are allowed automatically. |
+
+Verify the deployment by opening `https://<your-service>.onrender.com/health`.
+A correctly configured backend returns HTTP 200 with `"mode": "live"`. If it
+returns `"mode": "demo"`, the key or the `SKILLCRASH_USE_GEMMA` flag is missing.
+
+Render free instances spin down when idle. The first request after a pause can
+take about a minute; SkillCrash waits up to 60 seconds for `/health` and shows a
+cold-start message instead of failing silently.
+
+### Frontend on Vercel
+
+Set this variable in the Vercel project under **Settings → Environment
+Variables**, scoped to **Production** (and Preview if you use preview builds):
+
+```env
+NEXT_PUBLIC_SKILLCRASH_API=https://<your-service>.onrender.com
+```
+
+`NEXT_PUBLIC_*` variables are inlined by `next build`, so a change only takes
+effect after a redeploy. Requirements:
+
+- Use the backend's **https://** URL. An `http://` URL on an HTTPS Vercel page
+  is blocked by the browser as mixed content.
+- Do not use `http://localhost:8000` or `http://127.0.0.1:8000` on a deployed
+  site. The browser would look for the backend on the visitor's own machine.
+- If `NEXT_PUBLIC_SKILLCRASH_API` is unset, the deployed app runs in offline
+  demo mode and labels generated cases as simulated rather than live.
+
+The workspace header reports `Live API` only when the backend is reachable and
+its `/health` says live inference is configured. `Demo Mode` means the backend
+is reachable but has no key or flag. The Settings panel shows the exact URL
+being probed and an explanation for the common deployment mistakes.
 
 ## Limitations
 

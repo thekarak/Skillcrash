@@ -17,6 +17,11 @@ MAX_MODEL_SKILL_CONTEXT = 16_000
 # zero text. 8192 leaves room for reasoning plus the JSON payload.
 MAX_GENERATION_TOKENS = 8_192
 
+# Hard per-request timeout (milliseconds) for a single model call. Without it a
+# stalled upstream connection can keep the API request open until the proxy
+# gives up, which looks like "no response" in the browser.
+GENERATION_TIMEOUT_MS = 120_000
+
 # Gemma-first fallback chain. The previous chain pointed at "gemini-2.0-flash"
 # and "gemini-1.5-flash", both retired upstream (HTTP 404 NOT_FOUND), so the
 # "fallback" was dead. Override with GEMMA_FALLBACK_MODELS=a,b.
@@ -378,7 +383,10 @@ def generate_attacks_detailed(
         from google import genai
         from google.genai import types
 
-        client = genai.Client(api_key=api_key)
+        client = genai.Client(
+            api_key=api_key,
+            http_options=types.HttpOptions(timeout=GENERATION_TIMEOUT_MS),
+        )
         config = types.GenerateContentConfig(
             response_mime_type="application/json",
             max_output_tokens=MAX_GENERATION_TOKENS,

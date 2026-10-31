@@ -11,35 +11,47 @@ import { SkillCrashMark } from "../shared/wordmark";
 /**
  * Model/backend chip state with clear, human status indicators.
  */
-function modelChipState(status: "demo" | "unknown" | "checking" | "online" | "offline") {
+function modelChipState(
+  status: "demo" | "unknown" | "checking" | "online" | "offline",
+  mode: "live" | "demo" | null
+) {
   switch (status) {
     case "online":
-      return {
-        label: "Live API",
-        tone: "ok" as const,
-        className: "text-ok",
-        title: "Backend API is online. Gemma 4 is actively evaluating scenarios.",
-      };
+      return mode === "demo"
+        ? {
+            label: "Demo Mode",
+            tone: "warn" as const,
+            className: "text-warn",
+            title:
+              "Backend API is online, but it has no live model configured (GEMINI_API_KEY missing or SKILLCRASH_USE_GEMMA not 1). Generation uses built-in templates.",
+          }
+        : {
+            label: "Live API",
+            tone: "ok" as const,
+            className: "text-ok",
+            title: "Backend API is online and live inference is configured.",
+          };
     case "offline":
       return {
         label: "Offline",
         tone: "bad" as const,
         className: "text-bad",
-        title: "The configured backend API is unreachable.",
+        title: "The configured backend API is unreachable. Click to check the URL in Settings.",
       };
     case "checking":
       return {
         label: "Checking connection…",
         tone: "idle" as const,
         className: "text-ink-3",
-        title: "Checking backend health endpoint.",
+        title: "Checking backend health endpoint (Render cold starts can take ~60s).",
       };
     case "demo":
       return {
-        label: "Simulated Engine",
+        label: "No Backend",
         tone: "warn" as const,
         className: "text-warn",
-        title: "Simulated in-memory environment. No external model API required.",
+        title:
+          "No backend URL is configured. Set NEXT_PUBLIC_SKILLCRASH_API at build time, or enter a URL in Settings.",
       };
     default:
       return {
@@ -58,32 +70,22 @@ export function WorkspaceHeader() {
   const activeSkillId = useSkillCrash((s) => s.activeSkillId);
   const clientKind = useSkillCrash((s) => s.client.kind);
   const backendStatus = useSkillCrash((s) => s.backendStatus);
+  const backendMode = useSkillCrash((s) => s.backendMode);
   const checkBackendStatus = useSkillCrash((s) => s.checkBackendStatus);
-  const setBackendUrl = useSkillCrash((s) => s.setBackendUrl);
   const skill = skills.find((sk) => sk.id === activeSkillId) ?? null;
   const navLabel = NAV_ITEMS.find((n) => n.key === nav)?.label ?? "";
   const goLanding = useBackToLanding();
 
-  // Auto-connect to backend on load
+  // Probe the configured adapter once. Never substitute a hardcoded localhost
+  // URL: on a deployed site that request is doomed and hides configuration
+  // errors behind an opaque CORS/mixed-content failure.
   useEffect(() => {
-    async function initBackend() {
-      if (clientKind === "http") {
-        if (backendStatus === "unknown") {
-          await checkBackendStatus();
-        }
-      } else {
-        try {
-          const res = await fetch("http://127.0.0.1:8000/health", { signal: AbortSignal.timeout(2500) });
-          if (res.ok) {
-            await setBackendUrl("http://127.0.0.1:8000");
-          }
-        } catch {}
-      }
+    if (clientKind === "http" && backendStatus === "unknown") {
+      void checkBackendStatus();
     }
-    void initBackend();
-  }, [clientKind, backendStatus, checkBackendStatus, setBackendUrl]);
+  }, [clientKind, backendStatus, checkBackendStatus]);
 
-  const model = modelChipState(backendStatus);
+  const model = modelChipState(backendStatus, backendMode);
 
   return (
     <header className="sticky top-0 z-30 flex h-16 shrink-0 items-center gap-3 border-b border-line bg-base/95 px-4 backdrop-blur sm:px-6">

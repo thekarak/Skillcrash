@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Slider } from "@/components/ui/slider";
 import { useSkillCrash, useViewStore } from "@/lib/skillcrash/store";
+import { getBackendConfigError, isLoopbackHost } from "@/lib/skillcrash/api";
 import { useToast } from "@/hooks/use-toast";
 import { DemoBadge, StatusDot } from "../../shared/badges";
 import { usePrefersReducedMotion } from "../../three/use-scene";
@@ -18,21 +19,29 @@ export function SettingsPanel() {
   const backendStatus = useSkillCrash((s) => s.backendStatus);
   const backendDetail = useSkillCrash((s) => s.backendDetail);
   const backendUrl = useSkillCrash((s) => s.backendUrl);
+  const backendMode = useSkillCrash((s) => s.backendMode);
   const setBackendUrl = useSkillCrash((s) => s.setBackendUrl);
   const checkBackendStatus = useSkillCrash((s) => s.checkBackendStatus);
   const ensureDemoSkill = useSkillCrash((s) => s.ensureDemoSkill);
   const clearIntent = useViewStore((s) => s.clearIntent);
   const { toast } = useToast();
 
-  const [inputUrl, setInputUrl] = useState(backendUrl || "http://127.0.0.1:8000");
+  const [inputUrl, setInputUrl] = useState(backendUrl || "");
   const [connecting, setConnecting] = useState(false);
 
   useEffect(() => {
     if (backendUrl) {
       setInputUrl(backendUrl);
+      return;
+    }
+    // Local development: offer the local backend as a convenience default.
+    if (typeof window !== "undefined" && isLoopbackHost(window.location.hostname)) {
+      setInputUrl((current) => current || "http://127.0.0.1:8000");
     }
   }, [backendUrl]);
   const reducedMotion = usePrefersReducedMotion();
+
+  const configError = backendUrl ? getBackendConfigError(backendUrl) : null;
 
   const handleConnect = async (urlToUse?: string) => {
     const target = urlToUse !== undefined ? urlToUse : inputUrl;
@@ -76,9 +85,13 @@ export function SettingsPanel() {
             FastAPI &amp; Gemma 4 Backend Connection
           </h2>
           <div className="flex items-center gap-2">
-            {backendStatus === "online" ? (
+            {backendStatus === "online" && backendMode === "live" ? (
               <span className="sc-chip border-ok/40 bg-ok/10 text-ok font-medium text-[11px]">
                 ● Live Gemma 4 Connected
+              </span>
+            ) : backendStatus === "online" ? (
+              <span className="sc-chip border-warn/40 bg-warn/10 text-warn font-medium text-[11px]">
+                ● Backend Online · Demo Mode
               </span>
             ) : client.kind === "http" ? (
               <span className="sc-chip border-bad/40 bg-bad/10 text-bad font-medium text-[11px]">
@@ -93,7 +106,10 @@ export function SettingsPanel() {
         <p className="text-[12.5px] leading-relaxed text-ink-2 mb-3">
           Connect your deployed Render backend or local FastAPI instance. When connected, SkillCrash
           runs real adversarial attack generation with <strong>Gemma 4 (gemma-4-26b-a4b-it)</strong> and
-          executes live agent safety evaluations.
+          executes live agent safety evaluations. On a deployed site the default URL is baked in from{" "}
+          <code className="font-mono text-[11.5px] text-ink">NEXT_PUBLIC_SKILLCRASH_API</code> at build
+          time, so set it in the hosting dashboard and redeploy. A URL saved here only affects this
+          browser.
         </p>
 
         <div className="space-y-3">
@@ -143,15 +159,37 @@ export function SettingsPanel() {
           <div className="rounded-md border border-line bg-raised px-3.5 py-2.5 font-mono text-[11px] leading-relaxed text-ink-3 space-y-1">
             <div className="flex items-center gap-2">
               <StatusDot
-                tone={backendStatus === "online" ? "ok" : backendStatus === "demo" ? "warn" : "bad"}
+                tone={
+                  backendStatus === "online"
+                    ? backendMode === "live"
+                      ? "ok"
+                      : "warn"
+                    : backendStatus === "demo"
+                      ? "warn"
+                      : "bad"
+                }
               />
               <span className="text-ink-2 font-medium">Status:</span>
               <span>{backendDetail || client.statusLabel}</span>
             </div>
-            {backendStatus === "online" && (
+            <div className="flex items-center gap-2">
+              <span className="text-ink-2 font-medium">URL:</span>
+              <span className="break-all">{client.baseUrl ?? "none (offline demo)"}</span>
+            </div>
+            {backendStatus === "online" && backendMode === "live" && (
               <p className="text-ok text-[11px]">
-                ✓ Ready: Real Gemma 4 model inference enabled for attack generation and agent runs.
+                ✓ Backend reports live inference configured. Model connectivity is exercised when you
+                generate attacks or run a test.
               </p>
+            )}
+            {backendStatus === "online" && backendMode === "demo" && (
+              <p className="text-warn text-[11px]">
+                ! Backend reachable, but GEMINI_API_KEY is missing or SKILLCRASH_USE_GEMMA is not 1 on
+                the server. Generation will use built-in templates until those are set.
+              </p>
+            )}
+            {configError && (
+              <p className="text-bad text-[11px] whitespace-normal">! {configError}</p>
             )}
           </div>
         </div>

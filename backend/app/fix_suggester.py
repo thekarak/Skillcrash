@@ -6,6 +6,10 @@ import re
 from .models import FixSuggestion, TraceEvent
 
 
+# Hard per-request timeout (milliseconds) for a single model call.
+FIX_MODEL_TIMEOUT_MS = 90_000
+
+
 def _find_matching_instruction(skill_body: str, keywords: list[str]) -> str:
     """Find the most relevant line or sentence in skill_body matching any keyword."""
     if not skill_body or not skill_body.strip():
@@ -139,7 +143,10 @@ SKILL INSTRUCTIONS:
     primary_model = os.getenv("GEMMA_MODEL", "gemma-4-26b-a4b-it")
     fallback_model = "gemma-4-26b-a4b-it" if primary_model != "gemma-4-26b-a4b-it" else "gemma-4-31b-it"
 
-    client = genai.Client(api_key=os.environ.get("GEMINI_API_KEY", "").strip())
+    client = genai.Client(
+        api_key=os.environ.get("GEMINI_API_KEY", "").strip(),
+        http_options=types.HttpOptions(timeout=FIX_MODEL_TIMEOUT_MS),
+    )
     config = types.GenerateContentConfig(
         response_mime_type="application/json",
         max_output_tokens=768,
