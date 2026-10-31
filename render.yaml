@@ -1,0 +1,18 @@
+services:
+  - type: web
+    name: skillcrash-backend
+    runtime: python
+    rootDir: backend
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.12.7
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: GEMMA_MODEL
+        value: gemma-4-26b-a4b-it
+      - key: SKILLCRASH_USE_GEMMA
+        value: "1"
+      - key: CORS_ORIGINS
+        sync: false

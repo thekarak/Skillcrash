@@ -53,14 +53,31 @@ app = FastAPI(title="SkillCrash API", version="0.1.0")
 
 logger = logging.getLogger("skillcrash.api")
 
+cors_origins_env = os.getenv("CORS_ORIGINS", "")
+custom_origins = [orig.strip() for orig in cors_origins_env.split(",") if orig.strip()]
+default_origins = [
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
+]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000", "http://127.0.0.1:3000"],
-    allow_origin_regex=r"https?://(localhost|127\.0\.0\.1)(:\d+)?",
+    allow_origins=default_origins + custom_origins,
+    allow_origin_regex=r"https?://(localhost|127\.0\.0\.1)(:\d+)?|https://.*\.vercel\.app|https://.*\.onrender\.com",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+@app.get("/")
+def root() -> dict[str, Any]:
+    return {
+        "status": "online",
+        "service": "SkillCrash API",
+        "docs": "/docs",
+        "health": "/health",
+    }
 
 skills: dict[str, ParsedSkill] = {}
 cases_store: dict[str, TestCase] = {}
