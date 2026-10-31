@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Activity, BrainCircuit, Globe, RefreshCw, RotateCcw, Sparkles, Timer } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -24,8 +24,14 @@ export function SettingsPanel() {
   const clearIntent = useViewStore((s) => s.clearIntent);
   const { toast } = useToast();
 
-  const [inputUrl, setInputUrl] = useState(backendUrl || "");
+  const [inputUrl, setInputUrl] = useState(backendUrl || "http://127.0.0.1:8000");
   const [connecting, setConnecting] = useState(false);
+
+  useEffect(() => {
+    if (backendUrl) {
+      setInputUrl(backendUrl);
+    }
+  }, [backendUrl]);
   const reducedMotion = usePrefersReducedMotion();
 
   const handleConnect = async (urlToUse?: string) => {

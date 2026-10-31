@@ -41,12 +41,17 @@ export function getDefaultBackendUrl(): string {
   const envUrl = process.env.NEXT_PUBLIC_SKILLCRASH_API;
   if (envUrl && envUrl.startsWith("http")) return envUrl;
 
-  // 3. In browser on localhost/127.0.0.1, default to standard local FastAPI port 8000
+  // 3. In browser or standard local environment, default to 127.0.0.1:8000
   if (typeof window !== "undefined") {
     const host = window.location.hostname;
     if (host === "localhost" || host === "127.0.0.1") {
       return "http://127.0.0.1:8000";
     }
+  }
+
+  // 4. Default fallback for local environment
+  if (process.env.NODE_ENV !== "production") {
+    return "http://127.0.0.1:8000";
   }
 
   return "";

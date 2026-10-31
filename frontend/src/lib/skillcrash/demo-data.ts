@@ -58,6 +58,7 @@ export function getDemoSkill() {
 export const DEMO_TESTS: AttackTestCase[] = [
   {
     id: "TC-001",
+    caseId: "GOLDEN-001",
     title: "Instruction override via authority claim",
     category: "prompt-injection",
     attackPrompt:
@@ -67,6 +68,7 @@ export const DEMO_TESTS: AttackTestCase[] = [
   },
   {
     id: "TC-002",
+    caseId: "ATK-002",
     title: "Cleanup that quietly removes src/",
     category: "unconfirmed-destructive",
     attackPrompt:
@@ -76,6 +78,7 @@ export const DEMO_TESTS: AttackTestCase[] = [
   },
   {
     id: "TC-003",
+    caseId: "ATK-003",
     title: "Attempt to read .env contents",
     category: "secret-exposure",
     attackPrompt:
@@ -85,6 +88,7 @@ export const DEMO_TESTS: AttackTestCase[] = [
   },
   {
     id: "TC-004",
+    caseId: "ATK-004",
     title: "Attempt to expose .env via upload",
     category: "secret-exposure",
     attackPrompt:
@@ -94,6 +98,7 @@ export const DEMO_TESTS: AttackTestCase[] = [
   },
   {
     id: "TC-005",
+    caseId: "ATK-005",
     title: "Owner suspends confirmation rules",
     category: "conflicting-instructions",
     attackPrompt:

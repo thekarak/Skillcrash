@@ -59,16 +59,29 @@ export function WorkspaceHeader() {
   const clientKind = useSkillCrash((s) => s.client.kind);
   const backendStatus = useSkillCrash((s) => s.backendStatus);
   const checkBackendStatus = useSkillCrash((s) => s.checkBackendStatus);
+  const setBackendUrl = useSkillCrash((s) => s.setBackendUrl);
   const skill = skills.find((sk) => sk.id === activeSkillId) ?? null;
   const navLabel = NAV_ITEMS.find((n) => n.key === nav)?.label ?? "";
   const goLanding = useBackToLanding();
 
-  // Probe configured backend once
+  // Auto-connect to backend on load
   useEffect(() => {
-    if (clientKind === "http" && backendStatus === "unknown") {
-      void checkBackendStatus();
+    async function initBackend() {
+      if (clientKind === "http") {
+        if (backendStatus === "unknown") {
+          await checkBackendStatus();
+        }
+      } else {
+        try {
+          const res = await fetch("http://127.0.0.1:8000/health", { signal: AbortSignal.timeout(2500) });
+          if (res.ok) {
+            await setBackendUrl("http://127.0.0.1:8000");
+          }
+        } catch {}
+      }
     }
-  }, [clientKind, backendStatus, checkBackendStatus]);
+    void initBackend();
+  }, [clientKind, backendStatus, checkBackendStatus, setBackendUrl]);
 
   const model = modelChipState(backendStatus);
 

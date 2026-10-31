@@ -419,7 +419,8 @@ export const useSkillCrash = create<WorkspaceState>((set, get) => ({
 
     // A live run needs an HTTP adapter, a backend case id and the uploaded
     // skill; otherwise the deterministic scripted runner is the only option.
-    const canRunLive = state.client.kind === "http" && !!test.caseId && !!skill;
+    const resolvedCaseId = test.caseId || (test.id === "TC-001" ? "GOLDEN-001" : test.id.replace("TC-", "ATK-"));
+    const canRunLive = state.client.kind === "http" && !!resolvedCaseId && !!skill;
     const startedAt = Date.now();
 
     set({
@@ -429,12 +430,12 @@ export const useSkillCrash = create<WorkspaceState>((set, get) => ({
       runExecutionMode: canRunLive ? "live" : "simulated",
     });
 
-    if (canRunLive && skill && test.caseId) {
+    if (canRunLive && skill && resolvedCaseId) {
       let backend;
       try {
         backend = await state.client.runTest({
           skill,
-          caseId: test.caseId,
+          caseId: resolvedCaseId,
           approved: state.approvals[testId] !== undefined,
         });
       } catch (err) {
