@@ -58,6 +58,8 @@ custom_origins = [orig.strip() for orig in cors_origins_env.split(",") if orig.s
 default_origins = [
     "http://localhost:3000",
     "http://127.0.0.1:3000",
+    "https://skillcrash.vercel.app",
+    "https://skillcrash.onrender.com",
 ]
 
 app.add_middleware(

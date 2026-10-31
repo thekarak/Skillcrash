@@ -57,6 +57,12 @@ export function SettingsPanel() {
     }
   };
 
+  const handleRenderCloud = () => {
+    const url = "https://skillcrash.onrender.com";
+    setInputUrl(url);
+    void handleConnect(url);
+  };
+
   const handleLocalhost = () => {
     const url = "http://127.0.0.1:8000";
     setInputUrl(url);
@@ -140,6 +146,13 @@ export function SettingsPanel() {
 
           <div className="flex flex-wrap items-center gap-2 pt-1 text-[11px]">
             <span className="text-ink-3">Quick presets:</span>
+            <button
+              type="button"
+              onClick={handleRenderCloud}
+              className="rounded border border-accent/40 bg-accent/10 px-2 py-0.5 text-accent font-medium hover:bg-accent/20 cursor-pointer"
+            >
+              Render Cloud (https://skillcrash.onrender.com)
+            </button>
             <button
               type="button"
               onClick={handleLocalhost}

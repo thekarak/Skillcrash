@@ -91,6 +91,8 @@ export function getBackendConfigError(url: string | null | undefined): string | 
   return null;
 }
 
+export const PRODUCTION_RENDER_BACKEND = "https://skillcrash.onrender.com";
+
 export function getDefaultBackendUrl(): string {
   // 1. Check user-configured URL stored in local storage
   const stored = normalizeBackendUrl(getStoredBackendUrl());
@@ -108,8 +110,8 @@ export function getDefaultBackendUrl(): string {
     return "http://127.0.0.1:8000";
   }
 
-  // 4. Deployed without configuration: stay offline rather than guessing.
-  return "";
+  // 4. Default to official SkillCrash Render deployment in production
+  return PRODUCTION_RENDER_BACKEND;
 }
 
 /**
@@ -214,6 +216,9 @@ function describeFetchFailure(err: unknown, url: string, timeoutMs: number): str
     return `No response from ${url} within ${Math.round(timeoutMs / 1000)}s. A Render free-tier backend cold start can take about a minute: retry once, then check the backend logs if it still does not answer.`;
   }
   if (/failed to fetch|networkerror|load failed|fetch failed/i.test(message)) {
+    if (url.includes("onrender.com")) {
+      return `Render backend at ${url} is currently waking up from sleep (Render free tier cold start takes 30-50s). Please wait a moment and click "Save & Connect" again to connect.`;
+    }
     return `Could not reach ${url} from ${origin}. Common causes: the backend is not running or is asleep, the URL is wrong, CORS is blocking this origin (set CORS_ORIGINS on the backend to include ${origin}), or the backend is HTTP while this page is HTTPS.`;
   }
   return `Request to ${url} failed: ${message}`;
