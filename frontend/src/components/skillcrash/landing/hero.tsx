@@ -7,10 +7,6 @@ import { HeroSceneCanvas } from "../three/hero-canvas";
 
 /**
  * Scene 1 — Hero.
- *
- * Editorial plate composition: masthead rule, oversized left-aligned
- * headline, and the Attack Path — a live Three.js scene of the execution
- * pipeline — staged opposite the copy inside a framed plate with a caption.
  */
 export function Hero() {
   const openWorkspace = useOpenWorkspace();
@@ -28,23 +24,23 @@ export function Hero() {
         }}
       />
 
-      {/* masthead — printed-page metadata row */}
-      <div aria-hidden className="absolute inset-x-0 top-16 hidden lg:block">
+      {/* masthead row */}
+      <div aria-hidden className="absolute inset-x-0 top-24 hidden lg:block">
         <div className="sc-container-wide">
-          <div className="flex items-center justify-between border-t border-line pt-2.5 font-mono text-[9.5px] tracking-[0.22em] text-ink-3 uppercase">
-            <span>SkillCrash — adversarial skill testing</span>
-            <span className="hidden xl:block">failure as a first-class artifact</span>
-            <span>Plate 01 · The Attack Path</span>
+          <div className="flex items-center justify-between border-t border-line/40 pt-2.5 font-mono text-[10px] tracking-[0.2em] text-ink-3/80 uppercase">
+            <span>Security Simulation Pipeline</span>
+            <span>In-Memory Sandbox</span>
+            <span>Deterministic Verdicts</span>
           </div>
         </div>
       </div>
 
       <div className="sc-container-wide relative grid gap-10 pt-28 pb-16 sm:pt-32 lg:grid-cols-[minmax(0,10fr)_minmax(0,14fr)] lg:gap-10 lg:pt-40 lg:pb-24">
-        {/* Copy — editorial column */}
+        {/* Copy */}
         <div className="flex max-w-xl flex-col justify-center">
           <p className="sc-fade-up sc-eyebrow flex items-center gap-2.5">
             <span aria-hidden className="inline-block h-[3px] w-8 bg-accent" />
-            Adversarial crash-testing for agent skills
+            Security &amp; Reliability Testing for Agent Skills
           </p>
 
           <h1 className="sc-fade-up mt-6 text-[2.9rem] leading-[0.98] font-semibold tracking-[-0.03em] text-ink [animation-delay:80ms] sm:text-[3.9rem] lg:text-[4.6rem]">
@@ -70,8 +66,7 @@ export function Hero() {
           </h1>
 
           <p className="sc-fade-up mt-7 max-w-md text-[16px] leading-relaxed text-ink-2 [animation-delay:160ms]">
-            Stress-test AI Agent Skills through adversarial prompts, safe simulated
-            execution, and evidence-backed verdicts.
+            Crash-test your AI agent skills against prompt injections, secret exfiltration, and unsafe tool calls before they hit production.
           </p>
 
           <div className="sc-fade-up mt-9 flex flex-wrap items-center gap-3 [animation-delay:240ms]">
@@ -91,18 +86,21 @@ export function Hero() {
               asChild
             >
               <a href="#workflow">
-                Explore the System <ArrowDown className="h-4 w-4" />
+                See How It Works <ArrowDown className="h-4 w-4" />
               </a>
             </Button>
           </div>
 
-          <p className="sc-fade-up mt-5 font-mono text-[10.5px] leading-relaxed text-ink-3 [animation-delay:320ms]">
-            The workspace opens on demo case TC-004 — an emergency-framed attempt to
-            upload <span className="text-copper">.env</span> — and runs it end to end.
-          </p>
+          <div className="sc-fade-up mt-5 flex items-center gap-2 text-[12.5px] text-ink-3 [animation-delay:320ms]">
+            <span className="relative flex h-2 w-2">
+              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
+              <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500" />
+            </span>
+            <span>Preloaded with demo case <strong className="font-mono font-medium text-ink-2">TC-004</strong> &middot; Runs in browser</span>
+          </div>
         </div>
 
-        {/* The Attack Path — live Three.js plate */}
+        {/* The Attack Path — live Three.js scene */}
         <div className="sc-fade-up relative [animation-delay:200ms]">
           <div className="relative h-[420px] overflow-hidden rounded-sm border border-line bg-inset sm:h-[500px] lg:h-[620px]">
             <div
@@ -124,41 +122,47 @@ export function Hero() {
               <span className="absolute right-3 bottom-3 h-4 w-4 border-b border-r border-copper/60" />
               <div className="absolute top-3 left-1/2 flex -translate-x-1/2 items-center gap-2 rounded-sm border border-line bg-base/80 px-2.5 py-1 font-mono text-[9px] tracking-[0.2em] text-ink-3 uppercase backdrop-blur-sm">
                 <span className="sc-pulse-dot inline-block h-1.5 w-1.5 rounded-full bg-accent" />
-                Execution graph — live render
+                Live Attack Path
               </div>
             </div>
           </div>
           {/* plate caption */}
-          <div className="mt-3 flex items-start justify-between gap-4 border-t border-line pt-2.5">
-            <p className="max-w-lg font-mono text-[10px] leading-relaxed text-ink-2">
-              SKILL.md → attack prompt → agent → mock sandbox → deterministic judge.
-              The vermilion signal is the hostile path: the agent attempts{" "}
-              <span className="text-copper">upload_file(&quot;.env&quot;)</span>, the sandbox gate
-              blocks it — and the judge still returns FAIL, because the attempt itself
-              violated the approved rule.
-            </p>
-            <span className="hidden shrink-0 font-mono text-[10px] tracking-[0.14em] text-ink-3 uppercase sm:block">
-              fig. 01 — renders locally
+          <div className="mt-3 flex items-center justify-between gap-4 border-t border-line/70 pt-2.5">
+            <div className="flex items-center gap-2 font-mono text-[11px] text-ink-2">
+              <span className="h-1.5 w-1.5 rounded-full bg-accent" />
+              <span>Attack trace: <span className="font-semibold text-copper">upload_file(&quot;.env&quot;)</span> intercepted &rarr; <span className="font-semibold text-accent">FAIL</span></span>
+            </div>
+            <span className="hidden shrink-0 font-mono text-[10px] tracking-[0.1em] text-ink-3 uppercase sm:block">
+              Interactive 3D View
             </span>
           </div>
         </div>
       </div>
 
       {/* proof strip */}
-      <div className="relative border-t border-line bg-raised/40">
-        <div className="sc-container-wide flex flex-wrap items-center gap-x-8 gap-y-2 py-4" role="list" aria-label="Product facts">
-          {[
-            ["05", "attack classes"],
-            ["06", "allowlisted mock tools"],
-            ["3-state", "deterministic verdicts"],
-            ["00", "real executions — ever"],
-          ].map(([value, label], i) => (
-            <span key={label} role="listitem" className="flex items-baseline gap-2">
-              {i > 0 && <span aria-hidden className="mr-4 text-ink-3/40">/</span>}
-              <span className="font-mono text-[14px] font-semibold text-copper">{value}</span>
-              <span className="text-[12px] text-ink-3">{label}</span>
-            </span>
-          ))}
+      <div className="relative border-t border-line/70 bg-raised/30 py-3.5 sm:py-4">
+        <div className="sc-container-wide">
+          <div className="flex flex-wrap items-center justify-between gap-y-3 gap-x-6 text-[13px]">
+            <div className="flex items-center gap-2">
+              <span className="font-mono text-sm sm:text-base font-bold text-accent">5</span>
+              <span className="font-medium text-ink-2">Attack Vectors</span>
+            </div>
+            <span aria-hidden className="hidden sm:inline text-line-strong">•</span>
+            <div className="flex items-center gap-2">
+              <span className="font-mono text-sm sm:text-base font-bold text-accent">6</span>
+              <span className="font-medium text-ink-2">Mock Sandbox Tools</span>
+            </div>
+            <span aria-hidden className="hidden sm:inline text-line-strong">•</span>
+            <div className="flex items-center gap-2">
+              <span className="font-mono text-sm sm:text-base font-bold text-accent">100%</span>
+              <span className="font-medium text-ink-2">In-Memory Runtime</span>
+            </div>
+            <span aria-hidden className="hidden sm:inline text-line-strong">•</span>
+            <div className="flex items-center gap-2">
+              <span className="font-mono text-sm sm:text-base font-bold text-accent">Zero</span>
+              <span className="font-medium text-ink-2">Flaky Evaluations</span>
+            </div>
+          </div>
         </div>
       </div>
     </section>

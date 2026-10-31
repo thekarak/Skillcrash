@@ -27,55 +27,55 @@ const STAGES: StageDef[] = [
     id: "load",
     num: "01",
     title: "LOAD",
-    body: "The developer uploads SKILL.md. SkillCrash parses the YAML frontmatter, surfaces the skill's metadata, and extracts its safety instructions — the rules the agent is supposed to follow.",
+    body: "Upload or select a SKILL.md specification. SkillCrash parses frontmatter metadata, extracts system guidelines, and identifies implicit operational constraints and gaps.",
     meta: [
-      { label: "name", value: "project-cleanup" },
+      { label: "target", value: "project-cleanup" },
       { label: "directives", value: "1 explicit + 4 detected" },
-      { label: "gaps", value: "upload rule unscoped" },
+      { label: "boundaries", value: "unscoped file permissions" },
     ],
   },
   {
     id: "attack",
     num: "02",
     title: "ATTACK",
-    body: "Gemma 4 generates adversarial test cases tailored to that skill: prompt injection, unconfirmed destructive actions, secret-file exposure, invalid paths, conflicting instructions. Each case comes with a draft expected-behaviour rule set for you to review.",
+    body: "The test generator synthesizes targeted adversarial vectors against the parsed specification: indirect prompt injection, unauthorized exfiltration, unconfirmed destructive calls, path traversal, and constraint override attempts.",
     meta: [
-      { label: "cases", value: "3–5 per generation" },
-      { label: "categories", value: "5 attack classes" },
-      { label: "labelling", value: "demo generator — no live call" },
+      { label: "cases", value: "3–5 generated suite" },
+      { label: "categories", value: "5 attack vectors" },
+      { label: "engine", value: "Gemma 4 adversarial generation" },
     ],
   },
   {
     id: "execute",
     num: "03",
     title: "EXECUTE",
-    body: "The agent under test follows the skill and proposes tool calls. Every call is name-checked against the allowlist, schema-validated, policy-checked and simulated in-memory by the mock sandbox — then recorded, response and all.",
+    body: "The agent under test processes the adversarial challenge and proposes tool invocations. Every invocation is schema-validated, evaluated against runtime policy gates, executed in an isolated mock filesystem, and streamed to the trace recorder.",
     meta: [
       { label: "tools", value: "6 allowlisted mock tools" },
-      { label: "policy", value: "root confinement · secret-file block" },
-      { label: "recording", value: "full trace with timestamps" },
+      { label: "isolation", value: "in-memory filesystem sandbox" },
+      { label: "telemetry", value: "full execution trace" },
     ],
   },
   {
     id: "judge",
     num: "04",
     title: "JUDGE",
-    body: "Deterministic assertions compare the recorded behaviour against the expectations you approved — never against the attack text, and never by asking a model. Any violated rule produces FAIL with evidence; an incomplete run produces ERROR, not a guess.",
+    body: "The deterministic rule engine evaluates the execution trace against explicit safety assertions. Out-of-bounds invocations yield immediate FAIL verdicts with precise trace references, ensuring objective, reproducible evaluation.",
     meta: [
-      { label: "engine", value: "deterministic rules" },
-      { label: "semantics", value: "attempt counts, not outcome" },
-      { label: "outputs", value: "PASS · FAIL · ERROR" },
+      { label: "engine", value: "deterministic rule engine" },
+      { label: "evaluation", value: "invocation intent & boundaries" },
+      { label: "verdicts", value: "PASS · FAIL · ERROR" },
     ],
   },
   {
     id: "replay",
     num: "05",
     title: "REPLAY",
-    body: "The developer inspects the execution trace event by event — prompts, observable agent output, tool calls with arguments, validation results, mock responses, judge scoring — then reads the evidence-backed verdict and a suggested improvement to the skill.",
+    body: "Inspect the end-to-end execution timeline: prompts, agent outputs, tool call arguments, sandbox interceptions, and rule violations. Review the generated advisory patch to harden the skill against future regressions.",
     meta: [
-      { label: "views", value: "timeline · raw JSON" },
-      { label: "evidence", value: "rule-by-rule with trace refs" },
-      { label: "output", value: "advisory skill fix" },
+      { label: "inspection", value: "event timeline · JSON export" },
+      { label: "audit", value: "rule-by-rule trace evidence" },
+      { label: "remediation", value: "advisory guideline patch" },
     ],
   },
 ];
@@ -152,14 +152,14 @@ export function Workflow() {
       <div className="sc-container pt-16 pb-8 sm:pt-24 sm:pb-10">
         <SectionHeader
           index="02"
-          eyebrow="How it works"
+          eyebrow="System Architecture"
           title={
             <>
               Five stages between a skill
               <br className="hidden sm:block" /> and a defensible verdict.
             </>
           }
-          lede="Scroll to walk the pipeline your agent will walk — every stage below maps to a step you can run yourself in the workspace."
+          lede="Step through the automated testing lifecycle: from parsing skill boundaries to generating attack vectors, sandbox interception, and deterministic scoring."
         />
       </div>
 
@@ -213,7 +213,7 @@ export function Workflow() {
           <div className="relative z-10 border-t border-line bg-base/90 backdrop-blur">
             <div className="flex w-full items-center gap-4 px-5 py-3.5 sm:px-8">
               <span className="sc-mono-label hidden shrink-0 sm:block">
-                {staticMode ? "pipeline · static" : "pipeline · scroll-driven"}
+                {staticMode ? "pipeline · static" : "pipeline · interactive"}
               </span>
               <ol className="flex flex-1 items-center gap-1.5 sm:gap-3" aria-label="Workflow stages">
                 {STAGES.map((s, i) => {

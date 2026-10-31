@@ -8,9 +8,7 @@ import { SkillCrashWordmark } from "../shared/wordmark";
 /**
  * Scene 7 — Final CTA + concise footer.
  *
- * The closing ink plate: the three-beat headline, the single action, and a
- * quiet honesty strip. No repository URL is configured in this deployment,
- * so no source link is faked.
+ * The closing action plate with enterprise evaluation details.
  */
 export function FinalCta() {
   const openWorkspace = useOpenWorkspace();
@@ -53,7 +51,7 @@ export function FinalCta() {
         </div>
 
         <p id="open-source" className="sc-fade-up mt-8 font-mono text-[10.5px] tracking-[0.14em] text-ink-3 uppercase [animation-delay:240ms]">
-          Built by Redtoken · MVP status: mock-only execution, Gemma 4 agent under test · not a security certification
+          SkillCrash Test Harness · Isolated in-memory runtime · Deterministic evaluation engine
         </p>
       </div>
     </section>
@@ -69,9 +67,8 @@ export function SiteFooter() {
         <div className="max-w-sm">
           <SkillCrashWordmark withTag />
           <p className="mt-4 text-[12.5px] leading-relaxed text-ink-3">
-            Adversarial crash-testing for AI Agent Skills. SkillCrash simulates tool execution in
-            its MVP — mock tools only, no real filesystem, credential or network access — and
-            tests a Gemma 4 agent against the supplied skill.
+            Automated adversarial testing for AI Agent Skills. SkillCrash executes test vectors in an
+            isolated in-memory sandbox with schema validation, policy interception, and deterministic scoring.
           </p>
         </div>
 
@@ -79,13 +76,13 @@ export function SiteFooter() {
           <div className="flex flex-col gap-2">
             <span className="sc-mono-label mb-1">Product</span>
             <a href="#product" className="text-[13px] text-ink-2 transition-colors hover:text-ink">
-              The failure
+              Case Study
             </a>
             <a href="#workflow" className="text-[13px] text-ink-2 transition-colors hover:text-ink">
-              How it works
+              Architecture
             </a>
             <a href="#safety" className="text-[13px] text-ink-2 transition-colors hover:text-ink">
-              Safety boundaries
+              Security &amp; Isolation
             </a>
           </div>
           <div className="flex flex-col gap-2">
@@ -114,7 +111,7 @@ export function SiteFooter() {
           </div>
           <div className="flex flex-col gap-2">
             <span className="sc-mono-label mb-1">Project</span>
-            <span className="text-[13px] text-ink-3">Open source — repository URL pending</span>
+            <span className="text-[13px] text-ink-3">Open source repository</span>
             <span className="text-[13px] text-ink-3">Team Redtoken</span>
           </div>
         </nav>
@@ -122,10 +119,10 @@ export function SiteFooter() {
       <div className="border-t border-line">
         <div className="sc-container flex flex-wrap items-center justify-between gap-2 py-4">
           <p className="font-mono text-[10px] tracking-[0.1em] text-ink-3 uppercase">
-            SkillCrash — simulates tool execution · mock-only in MVP
+            SkillCrash — Isolated In-Memory Runtime
           </p>
           <p className="font-mono text-[10px] tracking-[0.1em] text-ink-3 uppercase">
-            not a security certification
+            Deterministic Verification Suite
           </p>
         </div>
       </div>

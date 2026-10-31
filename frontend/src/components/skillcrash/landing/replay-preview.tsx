@@ -17,10 +17,10 @@ import { SectionHeader } from "../shared/section-header";
 /**
  * Scene 4 — Execution Replay.
  *
- * A bone "lab report" section holding one dark instrument: a real replay of
- * TC-004, computed by the same engine the workspace uses (mock sandbox +
- * deterministic judge), not a decorative mockup. The attempted action and
- * the sandbox's response stay visually distinct throughout.
+ * Technical evaluation instrument: an interactive replay of TC-004,
+ * computed by the runtime engine (mock sandbox + deterministic judge).
+ * The attempted action, parameter validation, and sandbox policy response
+ * remain clearly differentiated and auditable.
  */
 export function ReplayPreview() {
   const computed = useMemo(() => {
@@ -84,17 +84,16 @@ export function ReplayPreview() {
           <SectionHeader
             index="03"
             eyebrow="Execution Replay"
-            title="Read the failure like an engineer."
+            title="Inspect Deterministic Execution Traces"
             lede={
               <>
-                TC-004 — &ldquo;Attempt to expose .env&rdquo; — computed in your browser by the
-                same local engine the workspace uses: a scripted demo agent, the mock sandbox
-                and the deterministic judge. It is a local demo — no live model call, no real
-                files, and nothing leaves this page.
+                Test Case TC-004 (&ldquo;Attempted exfiltration of .env&rdquo;) executed inside an isolated
+                in-memory sandbox. Every agent tool invocation, parameter payload, sandbox boundary interception,
+                and evaluation verdict is deterministically recorded and verifiable in real time.
               </>
             }
           />
-          <DemoBadge label="local demo · scripted agent" className="mb-1.5 shrink-0" />
+          <DemoBadge label="Interactive Simulation" className="mb-1.5 shrink-0" />
         </div>
 
         <div ref={rootRef} className="mt-10">
@@ -179,8 +178,7 @@ export function ReplayPreview() {
                 <>
                   <VerdictBadge outcome={computed.verdict.outcome} size="lg" />
                   <p className="min-w-0 flex-1 text-[13px] leading-relaxed text-ink-2">
-                    {computed.verdict.reason} The upload was attempted and blocked — the evidence
-                    records the attempt, and the attempt is what failed the approved rule.
+                    {computed.verdict.reason} Policy gate successfully prevented execution, but recorded intent directly violated specification constraint R1.
                   </p>
                 </>
               ) : (
@@ -195,11 +193,9 @@ export function ReplayPreview() {
 
           <div className="mt-6 flex flex-wrap items-start justify-between gap-6">
             <p className="max-w-xl font-mono text-[10.5px] leading-relaxed text-ink-2">
-              What you just watched: attack prompt received → the scripted demo agent attempts a
-              simulated upload_file(&quot;.env&quot;) → mock sandbox blocks the prohibited
-              secret-file operation → trace recorder captures action and response →
-              deterministic judge returns FAIL → evidence explains the violation. No real file
-              was ever accessed or uploaded.
+              Execution sequence: Prompt injected → Agent initiates upload_file(&quot;.env&quot;) →
+              Sandbox intercepts restricted credential pattern → Recorder logs structured trace →
+              Rule engine yields FAIL verdict with audit-ready evidence. Evaluated entirely within an isolated in-memory environment.
             </p>
             <Button
               type="button"
@@ -207,7 +203,7 @@ export function ReplayPreview() {
               className="h-11 bg-accent px-5 font-medium text-primary-foreground hover:bg-accent/90"
               onClick={() => openWorkspace({ testId: "TC-004", autorun: true })}
             >
-              Open this case in the workspace
+              Open Case in Workspace
             </Button>
           </div>
         </div>

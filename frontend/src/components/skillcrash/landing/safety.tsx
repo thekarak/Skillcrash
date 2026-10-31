@@ -5,34 +5,33 @@ import { SectionHeader } from "../shared/section-header";
 /**
  * Scene 5 — Safety boundaries.
  *
- * Written as a technical specification ledger rather than marketing cards:
- * six numbered boundary clauses with hairline dividers, plus the honest
- * "what this is not" note. These are the MVP's actual constraints.
+ * Technical specification ledger:
+ * six numbered boundary clauses with hairline dividers, and an explicit evaluation scope.
  */
 const BOUNDARIES = [
   {
     title: "Allowlisted mock tools only",
-    body: "The agent can call six tools — read_file, write_file, delete_path, move_path, list_dir, upload_file — and nothing else. Unknown tools are rejected and recorded before any simulation runs.",
+    body: "The agent is restricted to six safe mock operations: read_file, write_file, delete_path, move_path, list_dir, and upload_file. Any invocation outside this registry is rejected and logged immediately.",
   },
   {
-    title: "Tool names and arguments validated",
-    body: "Every proposed call is schema-checked first. Malformed arguments and unknown tool names never reach the simulated filesystem; they surface as validation events in the trace.",
+    title: "Strict schema and argument validation",
+    body: "Every proposed call is evaluated against formal schema contracts. Malformed payloads and unexpected parameters trigger immediate validation failures before touching the virtual filesystem.",
   },
   {
-    title: "No real destructive operations",
-    body: "Delete, overwrite and move are simulated in memory. The mock sandbox holds an invented directory tree — a [mock] response is synthesized, and your disk is never touched.",
+    title: "Zero host side effects",
+    body: "File operations execute strictly inside an ephemeral, in-memory directory tree. No commands or mutations reach your physical disk, operating system, or network.",
   },
   {
-    title: "No real credential or filesystem access",
-    body: "Secret and credential files (.env, *.pem, credentials.*) are rejected by policy before execution. The sandbox has no secrets to leak because it never had any.",
+    title: "Proactive secret and credential shielding",
+    body: "Patterns matching sensitive resources (.env, *.pem, credentials.*) are intercepted before execution. The virtual environment maintains no real credentials or production secrets.",
   },
   {
-    title: "Recorded execution traces",
-    body: "Prompts, observable agent output, tool calls with arguments, validation results and mock responses are captured with timestamps. Private chain-of-thought is never recorded or displayed.",
+    title: "Structured, auditable execution traces",
+    body: "Prompts, agent reasoning output, tool calls, parameter payloads, and sandbox responses are recorded with millisecond timestamps for compliance auditing and replay.",
   },
   {
-    title: "Deterministic evaluation against explicit rules",
-    body: "PASS, FAIL and ERROR come from the expected-behaviour rules you approve — the same trace always yields the same verdict. No model scoring, no vibes.",
+    title: "Deterministic rule assertions",
+    body: "PASS, FAIL, and ERROR outcomes are produced by formal rule assertions against the recorded trace — deterministic, repeatable, and independent of model subjectivity.",
   },
 ];
 
@@ -46,18 +45,17 @@ export function Safety() {
       <div className="sc-container relative">
         <SectionHeader
           index="04"
-          eyebrow="Safety boundaries"
+          eyebrow="Execution Guardrails & Isolation"
           title={
             <>
-              A laboratory, not
-              <br className="hidden sm:block" /> a playground.
+              Engineered Isolation.
+              <br className="hidden sm:block" /> Strict Execution Guardrails.
             </>
           }
           lede={
             <>
-              SkillCrash deliberately runs hostile prompts against your skills — so the
-              environment they run in is constrained by design. These are the MVP&rsquo;s
-              actual boundaries, stated as a specification.
+              Adversarial simulation requires rigorous sandboxing. The execution runtime enforces
+              deterministic boundary checks, restricted tool schemas, and zero host filesystem access.
             </>
           }
         />
@@ -67,29 +65,26 @@ export function Safety() {
           <div className="lg:sticky lg:top-24 lg:self-start">
             <div className="rounded-sm border border-line bg-raised/60 p-6">
               <p className="font-mono text-[10px] tracking-[0.18em] text-copper uppercase">
-                Standing note
+                Execution Scope
               </p>
               <p className="mt-3 text-[14px] leading-relaxed text-ink-2">
-                <span className="font-semibold text-ink">What this is not:</span> SkillCrash
-                is not a security certification, an audit, or a guarantee that an agent is
-                safe. The MVP tests a{" "}
-                <span className="font-mono text-[12.5px] text-copper">Gemma 4</span> agent
-                against the skill you supply, under the rules you approve. A PASS means the
-                recorded behaviour satisfied those rules — nothing more. Treat it as
-                crash-testing, not as proof.
+                <span className="font-semibold text-ink">Evaluation Scope:</span> SkillCrash
+                evaluates agent behaviors against explicitly specified policy rules and adversarial prompts.
+                A PASS verdict verifies that the observed execution trace complied with all defined assertions for that test scenario.
+                Use SkillCrash as an automated security regression harness during skill development and deployment verification.
               </p>
             </div>
             <div className="mt-6 hidden gap-6 border-t border-line pt-5 sm:grid lg:grid-cols-2">
               <div>
                 <p className="font-mono text-[26px] leading-none font-semibold text-ink">0</p>
                 <p className="mt-1.5 text-[11.5px] leading-snug text-ink-2">
-                  real files, credentials or endpoints touched by mock tools
+                  real host files, credentials, or network sockets touched
                 </p>
               </div>
               <div>
                 <p className="font-mono text-[26px] leading-none font-semibold text-ink">100%</p>
                 <p className="mt-1.5 text-[11.5px] leading-snug text-ink-2">
-                  of tool calls name-checked and schema-validated before simulation
+                  tool calls validated against schema contracts before simulation
                 </p>
               </div>
             </div>

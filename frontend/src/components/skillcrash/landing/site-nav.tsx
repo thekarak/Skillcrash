@@ -15,10 +15,10 @@ import { useOpenWorkspace } from "@/lib/skillcrash/store";
 import { SkillCrashWordmark } from "../shared/wordmark";
 
 const LINKS = [
-  { href: "#product", label: "The Failure" },
-  { href: "#workflow", label: "The System" },
-  { href: "#safety", label: "Safety" },
-  { href: "#open-source", label: "Status" },
+  { href: "#product", label: "Case Study" },
+  { href: "#workflow", label: "Architecture" },
+  { href: "#safety", label: "Security & Isolation" },
+  { href: "#open-source", label: "Specifications" },
 ];
 
 export function SiteNav() {
@@ -58,24 +58,24 @@ export function SiteNav() {
         scrolled ? "border-b border-line bg-base/85 backdrop-blur-md" : "bg-transparent"
       )}
     >
-      <div className="sc-container flex h-16 items-center justify-between gap-4">
+      <div className="sc-container-wide flex h-20 items-center justify-between gap-6">
         <a
           href="#top"
           aria-label="SkillCrash — back to top"
-          className="transition-opacity hover:opacity-80"
+          className="transition-opacity hover:opacity-85 -ml-1 sm:-ml-1.5"
         >
-          <SkillCrashWordmark withTag />
+          <SkillCrashWordmark withTag size="lg" />
         </a>
 
-        <nav aria-label="Site sections" className="hidden items-center gap-1 md:flex">
+        <nav aria-label="Site sections" className="hidden items-center gap-1.5 md:flex">
           {LINKS.map((l) => (
             <a
               key={l.href}
               href={l.href}
               aria-current={active === l.href ? "true" : undefined}
               className={cn(
-                "rounded-md px-3 py-2 text-[13px] font-medium transition-colors",
-                active === l.href ? "text-accent" : "text-ink-2 hover:text-ink"
+                "rounded-md px-3.5 py-2 text-[13.5px] font-medium transition-colors",
+                active === l.href ? "text-accent font-semibold" : "text-ink-2 hover:text-ink"
               )}
             >
               {l.label}
@@ -83,14 +83,14 @@ export function SiteNav() {
           ))}
         </nav>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-3">
           <Button
             type="button"
-            size="sm"
-            className="hidden bg-accent font-medium text-primary-foreground hover:bg-accent/85 sm:inline-flex"
+            size="default"
+            className="hidden h-10 bg-accent px-5 font-semibold text-primary-foreground shadow-sm hover:bg-accent/85 sm:inline-flex"
             onClick={() => openWorkspace()}
           >
-            Open Workspace <ArrowRight className="h-3.5 w-3.5" />
+            Open Workspace <ArrowRight className="h-4 w-4" />
           </Button>
 
           <Sheet open={open} onOpenChange={setOpen}>
@@ -100,38 +100,38 @@ export function SiteNav() {
                 aria-label="Open menu"
                 className="rounded-md border border-line p-2 text-ink-2 hover:text-ink md:hidden"
               >
-                <Menu className="h-4 w-4" />
+                <Menu className="h-5 w-5" />
               </button>
             </SheetTrigger>
-            <SheetContent side="right" className="w-[260px] border-line bg-surface p-0">
-              <SheetHeader className="border-b border-line px-4 py-4">
+            <SheetContent side="right" className="w-[280px] border-line bg-surface p-0">
+              <SheetHeader className="border-b border-line px-5 py-5">
                 <SheetTitle asChild>
                   <div>
-                    <SkillCrashWordmark />
+                    <SkillCrashWordmark size="md" />
                   </div>
                 </SheetTitle>
               </SheetHeader>
-              <nav className="flex flex-col gap-1 px-3 py-4" aria-label="Mobile site sections">
+              <nav className="flex flex-col gap-1 px-4 py-5" aria-label="Mobile site sections">
                 {LINKS.map((l) => (
                   <a
                     key={l.href}
                     href={l.href}
                     onClick={() => setOpen(false)}
-                    className="rounded-md px-3 py-2.5 text-[14px] font-medium text-ink-2 hover:bg-raised hover:text-ink"
+                    className="rounded-md px-3.5 py-2.5 text-[14px] font-medium text-ink-2 hover:bg-raised hover:text-ink"
                   >
                     {l.label}
                   </a>
                 ))}
                 <Button
                   type="button"
-                  size="sm"
-                  className="mt-3 bg-accent font-medium text-primary-foreground hover:bg-accent/85"
+                  size="default"
+                  className="mt-4 bg-accent font-semibold text-primary-foreground hover:bg-accent/85"
                   onClick={() => {
                     setOpen(false);
                     openWorkspace();
                   }}
                 >
-                  Open Workspace <ArrowRight className="h-3.5 w-3.5" />
+                  Open Workspace <ArrowRight className="h-4 w-4" />
                 </Button>
               </nav>
             </SheetContent>
