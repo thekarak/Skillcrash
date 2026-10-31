@@ -53,6 +53,7 @@ function modelChipState(status: "demo" | "unknown" | "checking" | "online" | "of
 
 export function WorkspaceHeader() {
   const nav = useSkillCrash((s) => s.nav);
+  const setNav = useSkillCrash((s) => s.setNav);
   const skills = useSkillCrash((s) => s.skills);
   const activeSkillId = useSkillCrash((s) => s.activeSkillId);
   const clientKind = useSkillCrash((s) => s.client.kind);
@@ -96,12 +97,18 @@ export function WorkspaceHeader() {
             {skill.source !== "demo" && <span className="text-ink-3">· {skill.source}</span>}
           </span>
         )}
-        <span className="sc-chip text-[12px]" title={model.title} data-model-state={backendStatus}>
+        <button
+          type="button"
+          onClick={() => setNav("settings")}
+          className="sc-chip text-[12px] hover:border-accent/40 cursor-pointer transition-colors"
+          title={`${model.title} — Click to configure backend URL in Settings`}
+          data-model-state={backendStatus}
+        >
           <StatusDot tone={model.tone} />
           <span className="text-ink-3">Model:</span>
           <span className="font-semibold text-ink">Gemma 4</span>
           <span className={cn("font-medium", model.className)}>· {model.label}</span>
-        </span>
+        </button>
         <span className="sc-chip text-[12px] text-ok" title="Safe in-memory execution">
           <StatusDot tone="ok" />
           Virtual Sandbox: In-Memory

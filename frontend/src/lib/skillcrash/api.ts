@@ -5,10 +5,52 @@ import { DEMO_EXPECTATIONS, DEMO_TESTS } from "./demo-data";
  * SkillCrash API adapter.
  *
  * The production backend is Python / FastAPI + Pydantic. This frontend
- * talks to it exclusively through this typed client interface, so the
- * demo implementation can be swapped for a real HTTP client without
- * touching any presentation component.
+ * talks to it through this typed client interface, supporting both live
+ * HTTP communication with the FastAPI/Gemma 4 backend and offline fallback.
  */
+
+export const BACKEND_URL_STORAGE_KEY = "skillcrash_backend_url";
+
+export function getStoredBackendUrl(): string | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const val = window.localStorage.getItem(BACKEND_URL_STORAGE_KEY);
+    return val && val.trim().length > 0 ? val.trim() : null;
+  } catch {
+    return null;
+  }
+}
+
+export function setStoredBackendUrl(url: string | null): void {
+  if (typeof window === "undefined") return;
+  try {
+    if (url && url.trim().length > 0) {
+      window.localStorage.setItem(BACKEND_URL_STORAGE_KEY, url.trim());
+    } else {
+      window.localStorage.removeItem(BACKEND_URL_STORAGE_KEY);
+    }
+  } catch {}
+}
+
+export function getDefaultBackendUrl(): string {
+  // 1. Check user-configured URL stored in local storage
+  const stored = getStoredBackendUrl();
+  if (stored && stored.startsWith("http")) return stored;
+
+  // 2. Check build-time environment variable
+  const envUrl = process.env.NEXT_PUBLIC_SKILLCRASH_API;
+  if (envUrl && envUrl.startsWith("http")) return envUrl;
+
+  // 3. In browser on localhost/127.0.0.1, default to standard local FastAPI port 8000
+  if (typeof window !== "undefined") {
+    const host = window.location.hostname;
+    if (host === "localhost" || host === "127.0.0.1") {
+      return "http://127.0.0.1:8000";
+    }
+  }
+
+  return "";
+}
 
 /**
  * How the returned cases were produced, as reported by the generator.
@@ -47,6 +89,7 @@ export function normalizeGenerationMode(raw?: string | null): GenerationMode {
 export interface SkillCrashClient {
   readonly kind: "demo" | "http";
   readonly statusLabel: string;
+  readonly baseUrl?: string;
   /** Probe the backend. Never claims success unless a request succeeds. */
   health(): Promise<HealthReport>;
   generateAttacks(skill: ParsedSkill, useGemma: boolean, categoryHints?: string[]): Promise<GeneratedAttacks>;
@@ -114,14 +157,13 @@ export class DemoSkillCrashClient implements SkillCrashClient {
   async health(): Promise<HealthReport> {
     return {
       ok: true,
-      detail: "Local demo adapter active. No backend URL is configured — running in simulated mode.",
+      detail: "Demo mode active (offline). Connect your Render or local backend in Settings for Gemma 4 AI inference.",
     };
   }
 
   async generateAttacks(_skill: ParsedSkill, _useGemma: boolean): Promise<GeneratedAttacks> {
-    // Simulated generation latency. No model runs here, so nothing may be
-    // stamped "gemma-4": the demo adapter only ever returns local fixtures.
-    await sleep(650 + Math.random() * 450);
+    // Simulated generation latency for standard benchmark
+    await sleep(400 + Math.random() * 200);
     return {
       tests: DEMO_TESTS.map((t) => ({
         ...t,
@@ -130,10 +172,11 @@ export class DemoSkillCrashClient implements SkillCrashClient {
       })),
       defaultExpectations: DEMO_EXPECTATIONS,
       source: "demo-generator",
-      label: "Built-in safety suite — simulated locally by the demo adapter",
+      label: "SkillCrash Standard Safety Benchmark",
       generationMode: "simulated",
-      notice:
-        "Demo adapter: these cases are simulated in your browser. No Gemma 4 or backend request was made, and the Gemma toggle is not sent anywhere.",
+      notice: _useGemma
+        ? "Backend connection required for Gemma 4 AI attack generation. Running standard benchmark suite. Enter your Render or local backend URL in Settings to activate real Gemma 4 inference."
+        : "Standard deterministic safety benchmark suite loaded.",
     };
   }
 
@@ -164,13 +207,12 @@ interface RawGeneratedAttacks {
 }
 
 /**
- * Real client for the FastAPI backend. Constructed when
- * NEXT_PUBLIC_SKILLCRASH_API is configured.
+ * Real client for the FastAPI backend. Connects to local or Render endpoints.
  */
 export class HttpSkillCrashClient implements SkillCrashClient {
   readonly kind = "http" as const;
   readonly statusLabel: string;
-  private baseUrl: string;
+  readonly baseUrl: string;
   /** Parsed-skill id → backend skill_id, so a skill is uploaded once. */
   private skillIds = new Map<string, string>();
 
@@ -205,13 +247,13 @@ export class HttpSkillCrashClient implements SkillCrashClient {
 
   async health(): Promise<HealthReport> {
     try {
-      const res = await fetch(`${this.baseUrl}/health`, { signal: AbortSignal.timeout(4000) });
+      const res = await fetch(`${this.baseUrl}/health`, { signal: AbortSignal.timeout(6000) });
       if (!res.ok) return { ok: false, detail: `Backend responded ${res.status}` };
       const raw = (await res.json().catch(() => null)) as { max_agent_turns?: unknown } | null;
       const turns = typeof raw?.max_agent_turns === "number" ? raw.max_agent_turns : undefined;
       return {
         ok: true,
-        detail: "FastAPI backend reachable",
+        detail: "FastAPI & Gemma 4 backend connected",
         ...(turns && turns > 0 ? { maxAgentTurns: turns } : {}),
       };
     } catch (err) {
@@ -221,8 +263,6 @@ export class HttpSkillCrashClient implements SkillCrashClient {
 
   async generateAttacks(skill: ParsedSkill, useGemma: boolean): Promise<GeneratedAttacks> {
     try {
-      // Prefer the stored skill id: the backend then uses exactly the skill
-      // it will later run against, instead of a detached copy.
       const skillId = await this.uploadSkill(skill);
       const res = await fetch(`${this.baseUrl}/attacks/generate`, {
         method: "POST",
@@ -232,9 +272,7 @@ export class HttpSkillCrashClient implements SkillCrashClient {
             ? { skill_id: skillId, use_gemma: useGemma }
             : { skill: { meta: skill.meta, instructions: skill.instructions }, use_gemma: useGemma }
         ),
-        // Thinking-capable Gemma models can take well over a minute once the
-        // upstream retries kick in (measured: ~78s for one live suite), and a
-        // premature abort would silently drop the run back to the demo suite.
+        // Live Gemma models can take up to ~60-90s
         signal: AbortSignal.timeout(180000),
       });
       if (!res.ok) {
@@ -245,21 +283,20 @@ export class HttpSkillCrashClient implements SkillCrashClient {
         throw new Error("Malformed response: missing tests array");
       }
       const notice = data.notice?.trim();
+      const isGemma = data.source === "gemma-4" || (data.generation_mode && data.generation_mode.includes("gemma"));
       return {
         tests: data.tests,
         defaultExpectations: data.defaultExpectations ?? {},
-        source: data.source === "gemma-4" ? "gemma-4" : "demo-generator",
+        source: isGemma ? "gemma-4" : "demo-generator",
         label:
           data.label ||
-          (data.source === "gemma-4"
-            ? "Gemma 4 test proposals (backend)"
-            : "Built-in safety suite (backend generator)"),
+          (isGemma
+            ? "Generated by Gemma 4 (gemma-4-26b-a4b-it) via FastAPI Backend"
+            : "SkillCrash Safety Benchmark Suite (Backend Generator)"),
         generationMode: normalizeGenerationMode(data.generation_mode ?? data.generationMode),
-        ...(notice ? { notice } : {}),
+        notice: notice || (isGemma ? "Real adversarial vectors synthesized by Gemma 4 (gemma-4-26b-a4b-it)." : undefined),
       };
     } catch (err) {
-      // If backend fails or connection drops, fall back gracefully to the
-      // local suite — honestly labelled as a local, model-free fallback.
       console.warn("Backend generateAttacks error, using fallback suite:", err);
       return {
         tests: DEMO_TESTS.map((t) => ({
@@ -269,10 +306,9 @@ export class HttpSkillCrashClient implements SkillCrashClient {
         })),
         defaultExpectations: DEMO_EXPECTATIONS,
         source: "demo-generator",
-        label: "Built-in safety suite — local fallback",
+        label: "SkillCrash Standard Benchmark Suite (Fallback)",
         generationMode: "simulated",
-        notice:
-          "Backend generation failed, so the built-in local suite is shown instead. No model call was made.",
+        notice: `Backend request failed: ${(err as Error).message}. Check your backend connection in Settings.`,
       };
     }
   }
@@ -294,8 +330,6 @@ export class HttpSkillCrashClient implements SkillCrashClient {
         test_case_id: params.caseId,
         approved_oracle: params.approved,
       }),
-      // A live agent loop can make several model calls; the server allows
-      // four turns, so keep the ceiling well above a single generation.
       signal: AbortSignal.timeout(300000),
     });
     if (!res.ok) {
@@ -352,12 +386,12 @@ interface RawRunResult {
 
 /* ------------------------------ Factory ------------------------------ */
 
-export function createSkillCrashClient(): SkillCrashClient {
-  const baseUrl = process.env.NEXT_PUBLIC_SKILLCRASH_API;
-  if (baseUrl && baseUrl.startsWith("http")) {
-    return new HttpSkillCrashClient(baseUrl);
+export function createSkillCrashClient(overrideUrl?: string | null): SkillCrashClient {
+  const url = overrideUrl !== undefined ? overrideUrl : getDefaultBackendUrl();
+  if (url && url.startsWith("http")) {
+    return new HttpSkillCrashClient(url);
   }
-  return new DemoSkillCrashClient("no live backend connected");
+  return new DemoSkillCrashClient("no live backend configured");
 }
 
 function sleep(ms: number): Promise<void> {

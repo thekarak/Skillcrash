@@ -22,6 +22,8 @@ import { composeLiveRun } from "./live-run";
 import { judgeRun } from "./judge";
 import {
   createSkillCrashClient,
+  getDefaultBackendUrl,
+  setStoredBackendUrl,
   type GenerationMode,
   type SkillCrashClient,
 } from "./api";
@@ -106,9 +108,11 @@ interface WorkspaceState {
   backendStatus: BackendStatus;
   backendDetail: string;
   /** Agent turn budget reported by the backend, when it reports one. */
+  backendUrl: string;
   backendTurnBudget: number | null;
   /** Probe the configured adapter. Resolves to the human-readable detail. */
   checkBackendStatus: () => Promise<string>;
+  setBackendUrl: (url: string) => Promise<{ ok: boolean; detail: string }>;
   gemmaEnabled: boolean;
   setGemmaEnabled: (enabled: boolean) => void;
 
@@ -187,7 +191,29 @@ export const useSkillCrash = create<WorkspaceState>((set, get) => ({
   client: initialClient,
   backendStatus: initialClient.kind === "demo" ? "demo" : "unknown",
   backendDetail: initialClient.statusLabel,
+  backendUrl: initialClient.baseUrl ?? getDefaultBackendUrl(),
   backendTurnBudget: null,
+  setBackendUrl: async (url: string) => {
+    const trimmed = url.trim();
+    setStoredBackendUrl(trimmed || null);
+    const newClient = createSkillCrashClient(trimmed || null);
+    set({
+      client: newClient,
+      backendUrl: trimmed,
+      backendStatus: newClient.kind === "demo" ? "demo" : "checking",
+      backendDetail: newClient.statusLabel,
+    });
+    if (newClient.kind === "demo") {
+      return { ok: true, detail: "Switched to offline benchmark mode." };
+    }
+    const health = await newClient.health();
+    set({
+      backendStatus: health.ok ? "online" : "offline",
+      backendDetail: health.detail,
+      backendTurnBudget: health.maxAgentTurns ?? null,
+    });
+    return health;
+  },
   checkBackendStatus: async () => {
     const { client } = get();
     const current = get().backendStatus;
