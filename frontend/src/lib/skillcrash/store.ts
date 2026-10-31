@@ -18,7 +18,13 @@ import type {
 import { DEFAULT_POLICY } from "./sandbox";
 import { DEMO_FIXES, getDemoSkill } from "./demo-data";
 import { computeRunSync, replayRun } from "./agent-runner";
-import { createSkillCrashClient, type SkillCrashClient } from "./api";
+import { composeLiveRun } from "./live-run";
+import { judgeRun } from "./judge";
+import {
+  createSkillCrashClient,
+  type GenerationMode,
+  type SkillCrashClient,
+} from "./api";
 
 /* ------------------------------ View state ------------------------------ */
 
@@ -82,6 +88,13 @@ export function useBackToLanding() {
 
 /* ---------------------------- Workspace state ---------------------------- */
 
+/**
+ * Truthful adapter/backend status. "demo" means no backend URL is configured,
+ * "unknown" means an HTTP adapter exists but /health has not answered yet.
+ * The UI must never render "live" for any state other than "online".
+ */
+export type BackendStatus = "demo" | "unknown" | "checking" | "online" | "offline";
+
 interface WorkspaceState {
   nav: WorkspaceNavKey;
   setNav: (nav: WorkspaceNavKey) => void;
@@ -90,6 +103,12 @@ interface WorkspaceState {
   activeSkillId: string | null;
 
   client: SkillCrashClient;
+  backendStatus: BackendStatus;
+  backendDetail: string;
+  /** Agent turn budget reported by the backend, when it reports one. */
+  backendTurnBudget: number | null;
+  /** Probe the configured adapter. Resolves to the human-readable detail. */
+  checkBackendStatus: () => Promise<string>;
   gemmaEnabled: boolean;
   setGemmaEnabled: (enabled: boolean) => void;
 
@@ -103,8 +122,12 @@ interface WorkspaceState {
 
   generating: boolean;
   generatorLabel: string;
+  generatorMode: GenerationMode;
+  generatorNotice: string;
   runStatus: RunStatus;
   runningTestId: string | null;
+  /** How the in-flight run executes: live backend model or scripted replay. */
+  runExecutionMode: "live" | "simulated" | null;
   liveTrace: TraceEvent[];
   runsByTest: Record<string, TestRunRecord>;
   runHistory: TestRunRecord[];
@@ -149,6 +172,9 @@ function rulesForRun(
 
 const DEMO_SKILL_ID = "skill-demo-project-cleanup";
 
+/** One client instance for the whole session — its kind defines demo vs HTTP. */
+const initialClient = createSkillCrashClient();
+
 /* -------------------------------- Store -------------------------------- */
 
 export const useSkillCrash = create<WorkspaceState>((set, get) => ({
@@ -158,7 +184,27 @@ export const useSkillCrash = create<WorkspaceState>((set, get) => ({
   skills: [],
   activeSkillId: null,
 
-  client: createSkillCrashClient(),
+  client: initialClient,
+  backendStatus: initialClient.kind === "demo" ? "demo" : "unknown",
+  backendDetail: initialClient.statusLabel,
+  backendTurnBudget: null,
+  checkBackendStatus: async () => {
+    const { client } = get();
+    const current = get().backendStatus;
+    if (client.kind === "demo") {
+      set({ backendStatus: "demo", backendDetail: client.statusLabel, backendTurnBudget: null });
+      return client.statusLabel;
+    }
+    if (current === "checking") return get().backendDetail;
+    set({ backendStatus: "checking" });
+    const result = await client.health();
+    set({
+      backendStatus: result.ok ? "online" : "offline",
+      backendDetail: result.detail,
+      backendTurnBudget: result.maxAgentTurns ?? null,
+    });
+    return result.detail;
+  },
   gemmaEnabled: true,
   setGemmaEnabled: (enabled) => set({ gemmaEnabled: enabled }),
 
@@ -170,8 +216,11 @@ export const useSkillCrash = create<WorkspaceState>((set, get) => ({
 
   generating: false,
   generatorLabel: "",
+  generatorMode: "unknown",
+  generatorNotice: "",
   runStatus: "idle",
   runningTestId: null,
+  runExecutionMode: null,
   liveTrace: [],
   runsByTest: {},
   runHistory: [],
@@ -260,10 +309,18 @@ export const useSkillCrash = create<WorkspaceState>((set, get) => ({
         runsByTest: {},
         runHistory: [],
         generatorLabel: generated.label,
+        // Never infer a model run from `source` — only generation_mode counts.
+        generatorMode: generated.generationMode ?? "unknown",
+        generatorNotice: generated.notice ?? "",
         generating: false,
       });
     } catch (err) {
-      set({ generating: false, generatorLabel: `Attack generation failed: ${(err as Error).message}` });
+      set({
+        generating: false,
+        generatorMode: "unknown",
+        generatorNotice: "",
+        generatorLabel: `Attack generation failed: ${(err as Error).message}`,
+      });
     }
   },
 
@@ -332,8 +389,127 @@ export const useSkillCrash = create<WorkspaceState>((set, get) => ({
 
     const rules = rulesForRun(testId, state.approvals, state.selectedExpectations);
     const policy = state.policy;
+    const skill = state.skills.find((s) => s.id === state.activeSkillId) ?? null;
 
-    set({ runStatus: "running", runningTestId: testId, liveTrace: [] });
+    // A live run needs an HTTP adapter, a backend case id and the uploaded
+    // skill; otherwise the deterministic scripted runner is the only option.
+    const canRunLive = state.client.kind === "http" && !!test.caseId && !!skill;
+    const startedAt = Date.now();
+
+    set({
+      runStatus: "running",
+      runningTestId: testId,
+      liveTrace: [],
+      runExecutionMode: canRunLive ? "live" : "simulated",
+    });
+
+    if (canRunLive && skill && test.caseId) {
+      let backend;
+      try {
+        backend = await state.client.runTest({
+          skill,
+          caseId: test.caseId,
+          approved: state.approvals[testId] !== undefined,
+        });
+      } catch (err) {
+        backend = null;
+        const detail = (err as Error).message || "The backend run failed.";
+        // Never dress a failed live run up as a simulated success: record an
+        // ERROR run that states exactly what happened.
+        const trace: TraceEvent[] = [
+          {
+            seq: 1,
+            t: 0,
+            type: "run-start",
+            testId,
+            agent: "Gemma 4 (live backend agent)",
+            simulated: false,
+          },
+          { seq: 2, t: 0.01, type: "attack-prompt", content: test.attackPrompt },
+          {
+            seq: 3,
+            t: 0.02,
+            type: "run-end",
+            stepCount: 0,
+            outcome: "agent-error",
+            detail: `Live backend run failed: ${detail}`,
+          },
+        ];
+        const judged = judgeRun(trace, rules, policy, testId, Date.now() - startedAt);
+        trace.push(...judged.events);
+        if (shouldAbort()) return;
+        const failed: TestRunRecord = {
+          testId,
+          startedAt: new Date(startedAt).toISOString(),
+          durationMs: Date.now() - startedAt,
+          verdict: judged.verdict,
+          trace,
+          executionMode: "live",
+        };
+        set((s) => ({
+          runStatus: "error",
+          runningTestId: null,
+          runExecutionMode: null,
+          runsByTest: { ...s.runsByTest, [testId]: failed },
+          runHistory: [failed, ...s.runHistory],
+        }));
+        return;
+      }
+
+      if (shouldAbort()) return;
+
+      if (!backend) {
+        set({ runStatus: "error", runningTestId: null, runExecutionMode: null });
+        return;
+      }
+
+      const composed = composeLiveRun({
+        test,
+        backend,
+        rules,
+        policy,
+        durationMs: Date.now() - startedAt,
+      });
+
+      await replayRun(
+        {
+          test,
+          trace: composed.trace,
+          verdict: composed.verdict,
+          durationMs: composed.durationMs,
+        },
+        {
+          instant: opts?.instant ?? false,
+          shouldAbort,
+          onEvent: (event) => {
+            if (shouldAbort()) return;
+            set((s) => ({ liveTrace: [...s.liveTrace, event] }));
+          },
+        }
+      );
+
+      if (shouldAbort()) return;
+
+      const record: TestRunRecord = {
+        testId,
+        startedAt: new Date(startedAt).toISOString(),
+        durationMs: composed.durationMs,
+        verdict: composed.verdict,
+        trace: composed.trace,
+        executionMode: "live",
+        backendVerdict: composed.backendVerdict,
+        backendTraceId: composed.traceId,
+      };
+
+      set((s) => ({
+        runStatus: composed.verdict.outcome === "ERROR" ? "error" : "done",
+        runningTestId: null,
+        runExecutionMode: null,
+        runsByTest: { ...s.runsByTest, [testId]: record },
+        runHistory: [record, ...s.runHistory],
+      }));
+      return;
+    }
 
     const computed = computeRunSync(test, policy, rules);
 
@@ -354,11 +530,13 @@ export const useSkillCrash = create<WorkspaceState>((set, get) => ({
       durationMs: computed.durationMs,
       verdict: computed.verdict,
       trace: computed.trace,
+      executionMode: "simulated",
     };
 
     set((s) => ({
       runStatus: computed.verdict.outcome === "ERROR" ? "error" : "done",
       runningTestId: null,
+      runExecutionMode: null,
       runsByTest: { ...s.runsByTest, [testId]: record },
       runHistory: [record, ...s.runHistory],
     }));
@@ -367,7 +545,14 @@ export const useSkillCrash = create<WorkspaceState>((set, get) => ({
   setStepLimit: (n) => set((s) => ({ policy: { ...s.policy, maxSteps: n } })),
 
   resetRuns: () =>
-    set({ runsByTest: {}, runHistory: [], liveTrace: [], runStatus: "idle", runningTestId: null }),
+    set({
+      runsByTest: {},
+      runHistory: [],
+      liveTrace: [],
+      runStatus: "idle",
+      runningTestId: null,
+      runExecutionMode: null,
+    }),
 }));
 
 /* ------------------------------ Selectors ------------------------------ */

@@ -79,10 +79,18 @@ export function RunStatusChip({ status, className }: { status: RunStatus; classN
 }
 
 /** Persistent, honest demo-mode badge. */
-export function DemoBadge({ label = "demo", className }: { label?: string; className?: string }) {
+export function DemoBadge({
+  label = "demo",
+  title = "Local demo data — no live backend call",
+  className,
+}: {
+  label?: string;
+  title?: string;
+  className?: string;
+}) {
   return (
     <span
-      title="Local demo data — no live backend call"
+      title={title}
       className={cn(
         "inline-flex items-center gap-1 rounded border border-warn/35 bg-warn/10 px-1.5 py-0.5 font-mono text-[10px] font-medium uppercase tracking-[0.12em] text-warn",
         className

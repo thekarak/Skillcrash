@@ -20,6 +20,9 @@ export function AttacksPanel() {
   const gemmaEnabled = useSkillCrash((s) => s.gemmaEnabled);
   const setGemmaEnabled = useSkillCrash((s) => s.setGemmaEnabled);
   const generatorLabel = useSkillCrash((s) => s.generatorLabel);
+  const generatorMode = useSkillCrash((s) => s.generatorMode);
+  const generatorNotice = useSkillCrash((s) => s.generatorNotice);
+  const clientKind = useSkillCrash((s) => s.client.kind);
   const approvals = useSkillCrash((s) => s.approvals);
   const selectedExpectations = useSkillCrash((s) => s.selectedExpectations);
   const offeredExpectations = useSkillCrash((s) => s.offeredExpectations);
@@ -37,6 +40,17 @@ export function AttacksPanel() {
     selectedTestId
   );
 
+  // Only an explicit "model" mode from an HTTP generator counts as model output.
+  // Anything else is simulated (demo/local) or unverified — never "live".
+  const modelReported = clientKind === "http" && generatorMode === "model";
+  const simulated =
+    !modelReported && (clientKind === "demo" || generatorMode === "simulated");
+  const modeLabel = modelReported
+    ? "model-generated (reported)"
+    : simulated
+      ? "simulated · no model call"
+      : "unverified · no live claim";
+
   return (
     <section aria-label="Adversarial test cases" className="sc-panel p-4 sm:p-5">
       <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
@@ -48,7 +62,12 @@ export function AttacksPanel() {
           <p className="mt-1 max-w-xl text-[12px] leading-relaxed text-ink-3">
             Generated against the active skill. Each case pairs an attack prompt with a separate,
             developer-approved set of expected-behaviour rules — the judge only reads the approved
-            rules. {gemmaEnabled ? "Gemma 4 model generates novel adversarial threat proposals." : "Standard deterministic safety suite benchmark active."}
+            rules.{" "}
+            {gemmaEnabled
+              ? clientKind === "http"
+                ? "Gemma 4 proposals are requested from the backend generator; cases are only labelled model-generated when the response says so."
+                : "Gemma mode is selected, but the demo adapter simulates proposals locally — no model call is made."
+              : "Standard deterministic safety suite benchmark selected."}
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2.5">
@@ -79,7 +98,7 @@ export function AttacksPanel() {
                   ? "bg-accent/15 text-accent font-semibold border border-accent/35 shadow-xs"
                   : "text-ink-3 hover:text-ink-2 hover:bg-raised/40"
               )}
-              title="Gemma 4 adversarial AI model reasoning"
+              title="Request Gemma 4 proposals from the backend generator (simulated in demo mode)"
             >
               <Sparkles className={cn("h-3.5 w-3.5", gemmaEnabled ? "text-accent" : "text-ink-3")} />
               <span>Gemma 4 AI</span>
@@ -122,10 +141,36 @@ export function AttacksPanel() {
         </div>
       </div>
 
-      {tests.length === 0 && generatorLabel && (
-        <p role="status" className="mb-3 rounded-md border border-line bg-raised px-3 py-2 font-mono text-[10.5px] leading-relaxed text-ink-3">
-          {generatorLabel}
-        </p>
+      {(generatorLabel || generatorNotice) && (
+        <div
+          role="status"
+          className="mb-3 space-y-1.5 rounded-md border border-line bg-raised px-3 py-2"
+        >
+          {generatorLabel && (
+            <div className="flex flex-wrap items-center gap-2">
+              <span
+                className={cn(
+                  "inline-flex items-center rounded border px-1.5 py-0.5 font-mono text-[9.5px] font-medium tracking-[0.12em] uppercase",
+                  modelReported
+                    ? "border-ok/35 bg-ok/10 text-ok"
+                    : "border-warn/35 bg-warn/10 text-warn"
+                )}
+                title={
+                  modelReported
+                    ? "The backend reported that a model produced these cases."
+                    : simulated
+                      ? "No model call produced these cases — they are simulated locally."
+                      : "The generator did not report a generation mode — no live inference is claimed."
+                }
+              >
+                {modeLabel}
+              </span>
+            </div>
+          )}
+          {generatorNotice && (
+            <p className="font-mono text-[10.5px] leading-relaxed text-ink-3">{generatorNotice}</p>
+          )}
+        </div>
       )}
 
       {tests.length === 0 ? (
@@ -209,7 +254,20 @@ export function AttacksPanel() {
                   <div className="sc-mono-label mb-1.5 flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       attack prompt
-                      <DemoBadge label={selected.generatedBy} />
+                      {modelReported ? (
+                        <span className="sc-chip" title="Generation mode reported by the backend">
+                          {selected.generatedBy}
+                        </span>
+                      ) : (
+                        <DemoBadge
+                          label={simulated ? "simulated" : "unverified"}
+                          title={
+                            simulated
+                              ? "Simulated output — no live model call is claimed"
+                              : "The generator did not report a mode — no live model call is claimed"
+                          }
+                        />
+                      )}
                     </div>
                     <Button
                       type="button"

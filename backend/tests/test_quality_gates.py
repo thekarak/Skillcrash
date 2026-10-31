@@ -8,7 +8,12 @@ from unittest.mock import MagicMock, patch
 import pytest
 from fastapi.testclient import TestClient
 
-from app.attack_generator import generate_attacks
+import app.attack_generator as attack_generator
+from app.attack_generator import (
+    MODE_SIMULATED,
+    generate_attacks,
+    generate_attacks_detailed,
+)
 from app.fix_suggester import suggest_fix
 from app.judge import judge
 from app.main import app
@@ -484,52 +489,56 @@ def test_judge_error_on_empty_trace_or_error_event():
 # ==============================================================================
 # Quality Gate 9: Model JSON Parse Failure
 # ==============================================================================
-def test_attack_generator_model_json_parse_failure():
-    """attack_generator raises ValueError when model returns malformed JSON or invalid schema."""
+def test_attack_generator_malformed_model_output_falls_back_honestly():
+    """Malformed/empty model output must degrade to the template suite with a recorded reason.
+
+    This test previously asserted that `generate_attacks` raised ValueError. That
+    encoded the old behaviour where a model/schema problem crashed the request for
+    the typed endpoint; the honest contract is now: never crash, fall back to the
+    adaptive template suite, and record the precise reason for the caller.
+    """
+    bad_payloads = [
+        "{ malformed json: true ",  # malformed JSON
+        json.dumps({"wrong_key": []}),  # missing 'cases' key
+        json.dumps({"cases": "not-a-list"}),  # 'cases' is not a list
+        json.dumps({"cases": []}),  # empty proposal list
+        json.dumps({"cases": [{"category": "wrong_path"}]}),  # schema validation failure
+        json.dumps(
+            {
+                "cases": [
+                    {
+                        "category": "invalid_category",
+                        "prompt": "Test prompt",
+                        "expected_outcome": "block",
+                        "must_not_actions": [],
+                        "scope": "/project/tmp",
+                        "rationale": "Rationale",
+                        "success_criteria": "Success",
+                    }
+                ]
+                * 3
+            }
+        ),
+    ]
     with patch.dict(
         "os.environ",
         {"GEMINI_API_KEY": "fake-test-key", "SKILLCRASH_USE_GEMMA": "1"},
         clear=False,
     ):
-        mock_client = MagicMock()
-        mock_response = MagicMock()
+        for payload in bad_payloads:
+            mock_client = MagicMock()
+            mock_response = MagicMock()
+            mock_response.text = payload
+            mock_response.candidates = []
 
-        with patch("google.genai.Client", return_value=mock_client):
-            mock_client.models.generate_content.return_value = mock_response
+            with patch("google.genai.Client", return_value=mock_client):
+                mock_client.models.generate_content.return_value = mock_response
+                report = generate_attacks_detailed("skill", "desc", "instructions")
 
-            # Scenario 1: Malformed JSON string
-            mock_response.text = "{ malformed json: true "
-            with pytest.raises(ValueError, match="Could not parse valid Gemma 4 proposals"):
-                generate_attacks("skill", "desc", "instructions")
-
-            # Scenario 2: Valid JSON but missing 'cases' key
-            mock_response.text = json.dumps({"wrong_key": []})
-            with pytest.raises(ValueError, match="Could not parse valid Gemma 4 proposals"):
-                generate_attacks("skill", "desc", "instructions")
-
-            # Scenario 3: 'cases' is not a list
-            mock_response.text = json.dumps({"cases": "not-a-list"})
-            with pytest.raises(ValueError, match="Could not parse valid Gemma 4 proposals"):
-                generate_attacks("skill", "desc", "instructions")
-
-            # Scenario 4: 'cases' has wrong length (e.g. 2 instead of exactly 3 proposals)
-            mock_response.text = json.dumps({"cases": [{"category": "wrong_path"}]})
-            with pytest.raises(ValueError, match="Could not parse valid Gemma 4 proposals"):
-                generate_attacks("skill", "desc", "instructions")
-
-            # Scenario 5: Schema validation failure within case item
-            invalid_case_item = {
-                "category": "invalid_category",
-                "prompt": "Test prompt",
-                "expected_outcome": "block",
-                "must_not_actions": [],
-                "scope": "/project/tmp",
-                "rationale": "Rationale",
-                "success_criteria": "Success",
-            }
-            mock_response.text = json.dumps({"cases": [invalid_case_item] * 3})
-            with pytest.raises(ValueError, match="Could not parse valid Gemma 4 proposals"):
-                generate_attacks("skill", "desc", "instructions")
+            assert report.mode == MODE_SIMULATED
+            assert report.error, f"expected a recorded failure reason for payload {payload!r}"
+            assert report.live_case_ids == ()
+            assert attack_generator.last_generation_error == report.error
 
 
 def test_api_generate_attacks_502_on_model_parse_failure():

@@ -14,6 +14,8 @@ export function SettingsPanel() {
   const setStepLimit = useSkillCrash((s) => s.setStepLimit);
   const resetRuns = useSkillCrash((s) => s.resetRuns);
   const client = useSkillCrash((s) => s.client);
+  const backendStatus = useSkillCrash((s) => s.backendStatus);
+  const checkBackendStatus = useSkillCrash((s) => s.checkBackendStatus);
   const ensureDemoSkill = useSkillCrash((s) => s.ensureDemoSkill);
   const clearIntent = useViewStore((s) => s.clearIntent);
   const { toast } = useToast();
@@ -21,9 +23,9 @@ export function SettingsPanel() {
   const reducedMotion = usePrefersReducedMotion();
 
   const checkHealth = async () => {
-    const result = await client.health();
-    setHealth(result.detail);
-    toast({ title: "Adapter health", description: result.detail });
+    const detail = await checkBackendStatus();
+    setHealth(detail);
+    toast({ title: "Adapter health", description: detail });
   };
 
   return (
@@ -47,10 +49,11 @@ export function SettingsPanel() {
           <span className="sc-chip text-ink-3">mock sandbox · no real side effects</span>
         </div>
         <p className="mt-3 text-[12.5px] leading-relaxed text-ink-2">
-          Turn Gemma on in the attack panel to add live model proposals to the built-in suite.
-          Running a test currently replays a scripted demo agent through the local mock sandbox;
-          it does not send the test prompt to Gemma. SkillCrash does not claim to have tested every
-          model, and it does not guarantee security.
+          Turn Gemma on in the attack panel to request model proposals from the backend. In demo
+          mode that request is simulated in-browser and labelled as simulated. Running a test
+          currently replays a scripted demo agent through the local mock sandbox; it does not send
+          the test prompt to Gemma. SkillCrash does not claim to have tested every model, and it
+          does not guarantee security.
         </p>
       </section>
 
@@ -62,22 +65,29 @@ export function SettingsPanel() {
             Backend adapter
           </h2>
           <div className="flex items-center gap-2">
-            <DemoBadge label={client.kind} />
+            {client.kind === "demo" ? (
+              <DemoBadge label={client.kind} />
+            ) : (
+              <span className="sc-chip font-mono text-[10px] uppercase">http adapter</span>
+            )}
             <Button
               type="button"
               size="sm"
               variant="outline"
               className="h-7 border-line bg-transparent text-[11px] text-ink-2 hover:bg-raised hover:text-ink"
               onClick={() => void checkHealth()}
+              disabled={backendStatus === "checking"}
             >
-              Check health
+              {backendStatus === "checking" ? "Checking…" : "Check health"}
             </Button>
           </div>
         </div>
         <p className="text-[12.5px] leading-relaxed text-ink-2">{client.statusLabel}</p>
         {health && (
           <p className="mt-2 flex items-center gap-2 font-mono text-[11px] text-ink-3">
-            <StatusDot tone={client.kind === "demo" ? "warn" : "ok"} />
+            <StatusDot
+              tone={backendStatus === "online" ? "ok" : backendStatus === "demo" ? "warn" : "bad"}
+            />
             {health}
           </p>
         )}

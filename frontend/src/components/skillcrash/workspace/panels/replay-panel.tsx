@@ -1,7 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
-import { Play, RotateCcw, ScrollText, TerminalSquare, Trash2 } from "lucide-react";
+import { Play, RotateCcw, ScrollText, ShieldAlert, TerminalSquare, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useSkillCrash } from "@/lib/skillcrash/store";
@@ -23,6 +22,9 @@ export function ReplayPanel() {
   const runsByTest = useSkillCrash((s) => s.runsByTest);
   const startRun = useSkillCrash((s) => s.startRun);
   const deleteRun = useSkillCrash((s) => s.deleteRun);
+  const clientKind = useSkillCrash((s) => s.client.kind);
+  const approvals = useSkillCrash((s) => s.approvals);
+  const runExecutionMode = useSkillCrash((s) => s.runExecutionMode);
 
   const selected = tests.find((t) => t.id === selectedTestId) ?? null;
   const isSelectedRunning = runningTestId === selectedTestId && selectedTestId !== null;
@@ -31,12 +33,11 @@ export function ReplayPanel() {
   const events = isSelectedRunning ? liveTrace : (recorded?.trace ?? []);
   const isLive = isSelectedRunning;
 
-  // keep the newest run visible when switching tabs back
-  useEffect(() => {
-    /* nothing to do — events are derived */
-  }, [selectedTestId]);
-
-  const canRun = selected !== null && runningTestId === null;
+  // A live run has no scripted fallback: the backend needs an approved oracle
+  // before it will execute a generated case.
+  const needsApproval = clientKind === "http" && !!selected?.caseId;
+  const approved = selectedTestId ? approvals[selectedTestId] !== undefined : false;
+  const canRun = selected !== null && runningTestId === null && (!needsApproval || approved);
 
   return (
     <div className="sc-ink">
@@ -62,7 +63,28 @@ export function ReplayPanel() {
         </div>
         <div className="flex items-center gap-2">
           <RunStatusChip status={isLive ? "running" : runStatus === "idle" ? "idle" : recorded ? "done" : "idle"} />
-          
+
+          {recorded?.executionMode && !isLive && (
+            <span
+              className={`sc-chip font-mono text-[10px] ${
+                recorded.executionMode === "live"
+                  ? "border-ok/30 bg-ok/10 text-ok"
+                  : "border-line bg-inset text-ink-3"
+              }`}
+              title={
+                recorded.executionMode === "live"
+                  ? `Executed by the live backend agent${recorded.backendTraceId ? ` (trace ${recorded.backendTraceId})` : ""}.${
+                      recorded.backendVerdict
+                        ? ` The backend's own oracle reported ${recorded.backendVerdict} as a cross-check.`
+                        : ""
+                    } The verdict shown comes from the deterministic judge over your approved rules.`
+                  : "Replayed by the local scripted agent — no model call was made."
+              }
+            >
+              {recorded.executionMode === "live" ? "LIVE" : "SIMULATED"}
+            </span>
+          )}
+
           {recorded && (
             <Button
               type="button"
@@ -76,10 +98,16 @@ export function ReplayPanel() {
             >
               <Trash2 className="h-3.5 w-3.5" /> Delete run
             </Button>
-          )}<Button
+          )}
+          <Button
             type="button"
             size="sm"
             disabled={!canRun}
+            title={
+              needsApproval && !approved
+                ? "Approve this case first — a live run sends the approved oracle to the backend."
+                : undefined
+            }
             className="bg-accent text-primary-foreground hover:bg-accent/85"
             onClick={() => {
               if (selected) void startRun(selected.id, { instant: prefersReducedMotion() });
@@ -97,6 +125,17 @@ export function ReplayPanel() {
           </Button>
         </div>
       </div>
+
+      {needsApproval && !approved && (
+        <p className="flex items-start gap-2 border-b border-warn/25 bg-warn/[0.07] px-4 py-2 font-mono text-[11px] leading-relaxed text-warn sm:px-5">
+          <ShieldAlert className="mt-px h-3.5 w-3.5 shrink-0" />
+          <span>
+            Approve this case&apos;s expected behaviour first — use <span className="text-ink">&ldquo;Approve for judge&rdquo;</span>{" "}
+            in the case above. The backend executes <span className="text-ink">{selected?.id}</span> only
+            against an approved oracle, and refuses unapproved generated cases.
+          </span>
+        </p>
+      )}
 
       <Tabs defaultValue="timeline" className="gap-0">
         <div className="border-b border-line px-4 pt-3 sm:px-5">
@@ -121,7 +160,9 @@ export function ReplayPanel() {
             {isLive && (
               <p className="mb-3 flex items-center gap-2 rounded-md border border-accent/25 bg-accent/[0.06] px-3 py-2 font-mono text-[11px] text-accent">
                 <span className="sc-pulse-dot inline-block h-1.5 w-1.5 rounded-full bg-accent" />
-                recording execution — simulated agent, mock sandbox, deterministic judge
+                {runExecutionMode === "live"
+                  ? "recording execution — live Gemma 4 via backend, mock sandbox, deterministic judge"
+                  : "recording execution — simulated agent, mock sandbox, deterministic judge"}
               </p>
             )}
             <TraceTimeline events={events} autoScroll={isLive} />

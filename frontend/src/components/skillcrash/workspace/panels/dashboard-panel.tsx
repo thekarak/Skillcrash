@@ -15,6 +15,8 @@ export function DashboardPanel() {
   const setNav = useSkillCrash((s) => s.setNav);
   const selectTest = useSkillCrash((s) => s.selectTest);
   const generateAttacks = useSkillCrash((s) => s.generateAttacks);
+  const clientKind = useSkillCrash((s) => s.client.kind);
+  const backendStatus = useSkillCrash((s) => s.backendStatus);
 
   const counts = {
     pass: runHistory.filter((r) => r.verdict.outcome === "PASS").length,
@@ -204,9 +206,19 @@ export function DashboardPanel() {
           <div className="mt-4 rounded-md border border-line bg-raised p-3">
             <p className="flex items-start gap-2 font-mono text-[10.5px] leading-relaxed break-words text-ink-3">
               <Play className="mt-0.5 h-3 w-3 shrink-0 text-accent" />
-              Demo adapter active: attack generation and agent execution are simulated locally and
-              clearly labelled. No live model call is made. Connect the FastAPI backend via{" "}
-              <span className="text-ink-2">NEXT_PUBLIC_SKILLCRASH_API</span> to go live.
+              {clientKind === "http" ? (
+                <>
+                  Backend adapter configured ({backendStatus}). Attack generation is requested from
+                  the FastAPI backend; test runs still replay a scripted agent locally. This UI does
+                  not verify live model inference.
+                </>
+              ) : (
+                <>
+                  Demo adapter: attack generation and agent execution are simulated locally and
+                  clearly labelled. No live model call is made. Connect the FastAPI backend via{" "}
+                  <span className="text-ink-2">NEXT_PUBLIC_SKILLCRASH_API</span> to go live.
+                </>
+              )}
             </p>
           </div>
           {tests.some((t) => t.id === "TC-004") && (

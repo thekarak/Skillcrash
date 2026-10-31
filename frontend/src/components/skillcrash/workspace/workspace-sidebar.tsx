@@ -78,7 +78,7 @@ function SidebarFooter() {
         <span className="sc-mono-label">sandbox</span>
         <span className="inline-flex items-center gap-1.5 font-mono text-[10px] text-ok">
           <StatusDot tone="ok" pulse />
-          mock · active
+          mock · in-memory
         </span>
       </div>
       <div className="flex items-center justify-between">

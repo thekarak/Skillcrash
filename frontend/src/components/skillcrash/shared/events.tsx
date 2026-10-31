@@ -106,7 +106,15 @@ function EventBody({ event }: { event: TraceEvent }) {
         <p className="text-[13px] leading-relaxed text-ink-2">
           Run started for <span className="font-mono text-ink">{event.testId}</span> — agent:{" "}
           <span className="font-mono text-ink">{event.agent}</span>{" "}
-          <span className="sc-chip ml-1 border-warn/30 text-warn">simulated</span>
+          {event.simulated ? (
+            <span className="sc-chip ml-1 border-warn/30 text-warn" title="No model call: a scripted agent echoed a fixed plan.">
+              simulated
+            </span>
+          ) : (
+            <span className="sc-chip ml-1 border-ok/30 text-ok" title="The backend ran this case against the live model.">
+              live
+            </span>
+          )}
         </p>
       );
     case "attack-prompt":

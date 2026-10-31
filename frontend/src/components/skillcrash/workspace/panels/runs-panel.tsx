@@ -69,6 +69,7 @@ function ExecutionConfigCard() {
   const setStepLimit = useSkillCrash((s) => s.setStepLimit);
   const clientKind = useSkillCrash((s) => s.client.kind);
   const clientLabel = useSkillCrash((s) => s.client.statusLabel);
+  const backendTurnBudget = useSkillCrash((s) => s.backendTurnBudget);
 
   return (
     <section aria-label="Execution configuration" className="sc-panel p-4 sm:p-5">
@@ -77,7 +78,9 @@ function ExecutionConfigCard() {
         Execution configuration
       </h2>
       <p className="mb-4 text-[12px] leading-relaxed text-ink-3">
-        How this run executes. Nothing here reaches a real filesystem, credentials or network.
+        {clientKind === "http"
+          ? "Approved cases are executed by the live backend agent. Tool calls stay inside an in-memory mock sandbox, and the judge reads only your approved rules."
+          : "How this run executes. Nothing here reaches a real filesystem, credentials or network."}
       </p>
 
       <dl className="space-y-2.5 text-[12px]">
@@ -86,7 +89,22 @@ function ExecutionConfigCard() {
             <BrainCircuit className="h-3.5 w-3.5 text-ink-3" /> Agent under test
           </dt>
           <dd className="min-w-0 text-right font-mono text-[11px] break-words">
-            Gemma 4 <span className="text-accent font-semibold">· active</span>
+            Gemma 4{" "}
+            {clientKind === "http" ? (
+              <span
+                className="text-ok"
+                title="Approved cases are executed by the FastAPI backend against live Gemma 4. Tool calls are still confined to the backend's in-memory mock sandbox."
+              >
+                · live backend
+              </span>
+            ) : (
+              <span
+                className="text-warn"
+                title="Runs replay a deterministic scripted agent through the local mock sandbox — no live model inference is performed here."
+              >
+                · simulated replay
+              </span>
+            )}
           </dd>
         </div>
         <div className="flex items-start justify-between gap-3">
@@ -127,11 +145,15 @@ function ExecutionConfigCard() {
       <div className="mt-4 rounded-md border border-line bg-raised p-3">
         <div className="mb-2 flex items-center justify-between">
           <span className="flex items-center gap-1.5 text-[12px] text-ink-2">
-            <Timer className="h-3.5 w-3.5 text-ink-3" /> Step limit
+            <Timer className="h-3.5 w-3.5 text-ink-3" />
+            {clientKind === "http" ? "Simulated replay step limit" : "Step limit"}
           </span>
           <span className="font-mono text-[11px] text-accent">{policy.maxSteps} steps</span>
         </div>
+        {/* The slider root reserves its own height (h-5) so the thumb can never
+            overflow into the caption below it, at any viewport width. */}
         <Slider
+          className="mt-0.5"
           value={[policy.maxSteps]}
           min={2}
           max={16}
@@ -139,9 +161,19 @@ function ExecutionConfigCard() {
           onValueChange={(v) => setStepLimit(v[0] ?? policy.maxSteps)}
           aria-label="Agent step limit"
         />
-        <p className="mt-2 font-mono text-[10px] leading-relaxed text-ink-3">
-          Runs that exceed the limit end in a controlled ERROR — lower it and re-run a case to see
-          that state.
+        <p className="mt-3 font-mono text-[10px] leading-relaxed text-ink-3">
+          {clientKind === "http" ? (
+            <>
+              Applies to locally replayed traces. Live runs are bounded by the backend&apos;s own{" "}
+              {backendTurnBudget ? `${backendTurnBudget}-turn` : "fixed"} agent budget — exceeding it
+              ends the run in a controlled ERROR.
+            </>
+          ) : (
+            <>
+              Runs that exceed the limit end in a controlled ERROR — lower it and re-run a case to
+              see that state.
+            </>
+          )}
         </p>
       </div>
     </section>

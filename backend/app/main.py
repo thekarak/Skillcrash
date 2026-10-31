@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import logging
 import os
 import uuid
 from pathlib import Path
@@ -14,8 +15,19 @@ from starlette.concurrency import run_in_threadpool
 
 load_dotenv(Path(__file__).resolve().parents[1] / ".env")
 
-from .agent_runner import run_agent
-from .attack_generator import _demo_attacks, generate_attacks, golden_case
+from .agent_runner import MAX_AGENT_TURNS, run_agent
+from .attack_generator import (
+    MODE_DEMO,
+    MODE_GEMMA,
+    MODE_GEMINI_FALLBACK,
+    MODE_SIMULATED,
+    GenerationReport,
+    _demo_attacks,
+    generate_attacks,
+    generate_attacks_detailed,
+    get_last_generation_error,
+    golden_case,
+)
 from .fix_suggester import suggest_fix
 from .judge import judge, judge_detailed
 from .mock_tools import FIXTURES
@@ -38,6 +50,8 @@ from .models import (
 from .skill_parser import MAX_SKILL_BYTES, SkillParseError, parse_skill
 
 app = FastAPI(title="SkillCrash API", version="0.1.0")
+
+logger = logging.getLogger("skillcrash.api")
 
 app.add_middleware(
     CORSMiddleware,
@@ -118,13 +132,40 @@ def build_hardened_markdown(skill: ParsedSkill, patch: str | None = None) -> str
 @app.get("/health")
 @app.get("/api/health")
 def health() -> dict[str, Any]:
-    mode = "live" if (os.getenv("GEMINI_API_KEY") and os.getenv("SKILLCRASH_USE_GEMMA") == "1") else "demo"
-    model = os.getenv("GEMMA_MODEL", "gemma-4-26b-a4b-it")
+    """Report configuration only — this endpoint never probes model connectivity."""
+    key_present = bool(os.getenv("GEMINI_API_KEY", "").strip())
+    gemma_enabled = os.getenv("SKILLCRASH_USE_GEMMA") == "1"
+    model = (os.getenv("GEMMA_MODEL", "").strip() or "gemma-4-26b-a4b-it")
+    live_configured = key_present and gemma_enabled
+    mode = "live" if live_configured else "demo"
+
+    if live_configured:
+        detail = (
+            f"FastAPI backend reachable. Live generation is configured for {model}, but model "
+            "connectivity is NOT probed by this endpoint; upstream calls can still rate-limit or fail."
+        )
+    elif not key_present:
+        detail = (
+            "FastAPI backend reachable. Demo mode: GEMINI_API_KEY is not set, so generation uses "
+            "built-in templates. Connectivity is not probed."
+        )
+    else:
+        detail = (
+            "FastAPI backend reachable. Demo mode: SKILLCRASH_USE_GEMMA is not 1, so generation uses "
+            "built-in templates. Connectivity is not probed."
+        )
+
     return {
         "ok": True,
         "mode": mode,
         "model": model,
-        "detail": f"FastAPI backend reachable ({model})" if mode == "live" else "FastAPI backend reachable (Demo mode)",
+        "model_configured": model,
+        "key_present": key_present,
+        "gemma_enabled": gemma_enabled,
+        "connectivity_probed": False,
+        # The UI shows this so the live turn budget is never guessed.
+        "max_agent_turns": MAX_AGENT_TURNS,
+        "detail": detail,
     }
 
 
@@ -209,12 +250,21 @@ async def attacks_generate_generic(request: Request) -> dict:
     if use_gemma is not None and not isinstance(use_gemma, bool):
         raise HTTPException(status_code=422, detail="use_gemma must be a boolean.")
     try:
-        cases, generation_mode = await run_in_threadpool(
-            generate_attacks, name, desc, instructions, use_gemma=use_gemma
+        report = await run_in_threadpool(
+            generate_attacks_detailed, name, desc, instructions, use_gemma=use_gemma
         )
     except Exception as exc:
-        logger.warning(f"Error during attack generation, falling back: {exc}")
-        cases, generation_mode = _demo_attacks(), "demo"
+        logger.warning("Error during attack generation, falling back: %s", exc)
+        report = GenerationReport(
+            cases=_demo_attacks(),
+            mode=MODE_DEMO,
+            error=f"Attack generation crashed ({type(exc).__name__}: {exc}).",
+        )
+
+    cases = report.cases
+    generation_mode = report.mode
+    live_case_ids = set(report.live_case_ids)
+    notice = " ".join(report.error.split()) if report.error else ""
 
     for case in cases:
         cases_store[case.id] = case
@@ -226,6 +276,14 @@ async def attacks_generate_generic(request: Request) -> dict:
         "wrong_path": "invalid-path",
     }
 
+    def generated_by(case: TestCase) -> str:
+        """Attribute each case to the thing that actually produced it."""
+        if case.id not in live_case_ids:
+            return "demo-generator"
+        if generation_mode == MODE_GEMMA:
+            return "gemma-4"
+        return report.model or generation_mode
+
     tests = []
     default_expectations: dict[str, list[dict[str, str]]] = {}
     for case in cases:
@@ -233,10 +291,14 @@ async def attacks_generate_generic(request: Request) -> dict:
         test_id = case.id if case.id.startswith("TC-") else f"TC-{case.id.replace('ATK-', '').replace('GOLDEN-', '')}"
         tests.append({
             "id": test_id,
+            # The backend stores cases under their canonical id (GOLDEN-001,
+            # ATK-002, GEMMA-003 ...). POST /api/run resolves test_case_id
+            # against that store, so the UI needs it to run a case live.
+            "caseId": case.id,
             "title": f"Attack: {case.category.replace('_', ' ').title()}",
             "category": category,
             "attackPrompt": case.prompt,
-            "generatedBy": "gemma-4" if (case.id.startswith("GEMMA-") or generation_mode in ("gemma", "gemma-simulated")) else "demo-generator",
+            "generatedBy": generated_by(case),
             "createdAt": "2026-10-29T12:00:00Z",
         })
 
@@ -254,14 +316,27 @@ async def attacks_generate_generic(request: Request) -> dict:
 
         default_expectations[test_id] = rules
 
-    is_live = generation_mode == "gemma"
-    is_simulated = generation_mode == "gemma-simulated"
-    source = "gemma-4" if (is_live or is_simulated) else "demo-generator"
+    is_live = generation_mode == MODE_GEMMA
+    is_gemini = generation_mode == MODE_GEMINI_FALLBACK
+    is_simulated = generation_mode == MODE_SIMULATED
+    short_reason = " ".join((report.error or "").split())[:240]
     if is_live:
-        label = "Generated by Gemma 4 live model inference via FastAPI backend"
+        source = "gemma-4"
+        label = f"Generated by Gemma 4 live model inference ({report.model}) via FastAPI backend"
+    elif is_gemini:
+        source = report.model or MODE_GEMINI_FALLBACK
+        label = (
+            f"Generated by live model inference ({report.model}); Gemma 4 did not produce output, "
+            "so these proposals are not Gemma output"
+        )
     elif is_simulated:
-        label = "Generated by Gemma 4 adversarial engine (blueprint policy)"
+        source = "demo-generator"
+        label = (
+            "Adaptive template suite - Gemma 4 call did not produce output "
+            f"({short_reason or 'no live output'})"
+        )
     else:
+        source = "demo-generator"
         label = "SkillCrash Standard Safety Suite Benchmark"
 
     return {
@@ -269,6 +344,7 @@ async def attacks_generate_generic(request: Request) -> dict:
         "defaultExpectations": default_expectations,
         "source": source,
         "label": label,
+        "notice": notice,
         "cases": [c.model_dump() for c in cases],
         "generation_mode": generation_mode,
     }
@@ -291,7 +367,11 @@ def attacks(
     for case in cases:
         cases_store[case.id] = case
 
-    return {"cases": [case.model_dump() for case in cases], "generation_mode": generation_mode}
+    return {
+        "cases": [case.model_dump() for case in cases],
+        "generation_mode": generation_mode,
+        "notice": get_last_generation_error() or "",
+    }
 
 
 @app.post("/api/cases/{case_id}/approve", response_model=TestCase)
